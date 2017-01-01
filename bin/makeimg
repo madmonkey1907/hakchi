@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+inpath=$1
+if [ -z "$inpath" ]; then
+  inpath=./kernel
+fi
+
+infile=$(basename "$inpath").img
+img=./$infile
+
+rm -rf "$inpath/initramfs/hakchi/transfer"
+(cd "$inpath/../mod";cp -a * "../$inpath/initramfs/")
+if [ "$2" == "notx" ]; then
+  rm -rf "$inpath/initramfs/hakchi/transfer"
+fi
+upx -qq --best "$inpath/initramfs/sbin/cryptsetup" || true
+(cd "$inpath/initramfs";find . -print0 | sort -z | cpio -0o -H newc -R root:root --quiet > ../initramfs.cpio)
+lzop --best -f -o "$inpath/$infile-ramdisk.gz" "$inpath/initramfs.cpio"
+
+mkbootimg \
+--kernel "$inpath/$infile-zImage" \
+--ramdisk "$inpath/$infile-ramdisk.gz" \
+--cmdline "$(cat $inpath/$infile-cmdline)" \
+--board "$(cat $inpath/$infile-board)" \
+--base "$(cat $inpath/$infile-base)" \
+--pagesize "$(cat $inpath/$infile-pagesize)" \
+--kernel_offset "$(cat $inpath/$infile-kerneloff)" \
+--ramdisk_offset "$(cat $inpath/$infile-ramdiskoff)" \
+--tags_offset "$(cat $inpath/$infile-tagsoff)" \
+-o "$img"

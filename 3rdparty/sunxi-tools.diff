@@ -1,0 +1,28 @@
+diff --git a/fel_lib.c b/fel_lib.c
+index a484b4c..8d4d651 100644
+--- a/fel_lib.c
++++ b/fel_lib.c
+@@ -42,8 +42,14 @@ struct _felusb_handle {
+ 	bool iface_detached;
+ };
+ 
++void no_exit(int ec)
++{
++	(void)ec;
++}
++#define exit(x) {no_exit(x);return 0;}
++
+ /* a helper function to report libusb errors */
+-void usb_error(int rc, const char *caption, int exitcode)
++void no_usb_error(int rc, const char *caption, int exitcode)
+ {
+ 	if (caption)
+ 		fprintf(stderr, "%s ", caption);
+@@ -58,6 +64,7 @@ void usb_error(int rc, const char *caption, int exitcode)
+ 	if (exitcode != 0)
+ 		exit(exitcode);
+ }
++#define usb_error(x,y,z) {no_usb_error(x,y,z);if(z!=0)return 0;}
+ 
+ /*
+  * AW_USB_MAX_BULK_SEND and the timeout constant USB_TIMEOUT are related.

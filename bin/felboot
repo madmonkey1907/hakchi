@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+sunxi-fel version
+
+sunxi-fel write 0x2000 data/fes1.bin
+sunxi-fel exe 0x2000
+
+sunxi-fel -p write 0x43800000 kernel.img
+sunxi-fel -p write 0x47000000 data/uboot.bin
+sunxi-fel exe 0x47000000

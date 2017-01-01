@@ -1,0 +1,4 @@
+if [ -z "$(which felboot)" ]; then
+  export PATH=$(pwd)/bin:$(pwd)/build:$PATH
+  echo PATH=$PATH
+fi

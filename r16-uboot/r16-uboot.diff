@@ -1,0 +1,243 @@
+diff --git a/Makefile b/Makefile
+index 1c696db..f911894 100644
+--- a/Makefile
++++ b/Makefile
+@@ -441,7 +441,7 @@ $(obj)u-boot.ubl:       $(obj)u-boot-nand.bin
+ 		-e $(CONFIG_SYS_TEXT_BASE) -d $< $@
+ 
+ $(obj)u-boot-$(TARGET).bin:	$(obj)u-boot.bin
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f u-boot.bin -m uboot
+ 
+ GEN_UBOOT = \
+@@ -466,30 +466,30 @@ spl_lib: $(TIMESTAMP_FILE) $(VERSION_FILE) depend
+ 
+ fes:    spl_lib depend
+ 		$(MAKE) -C sunxi_spl/fes_init all
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f sunxi_spl/fes_init/fes1.bin -m boot0
+ 		@$(TOPDIR)/tools/gen_check_sum sunxi_spl/fes_init/fes1.bin fes1.bin > /dev/null
+ 
+ boot0:  spl_lib depend
+ 		$(MAKE) -C sunxi_spl/boot0 all
+ ifdef CONFIG_STORAGE_MEDIA_NAND
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f sunxi_spl/boot0/boot0_nand.bin -m boot0
+ 		@$(TOPDIR)/tools/gen_check_sum sunxi_spl/boot0/boot0_nand.bin boot0_nand.bin > /dev/null
+ endif
+ ifdef CONFIG_STORAGE_MEDIA_MMC
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f sunxi_spl/boot0/boot0_sdcard.bin -m boot0
+ 		@$(TOPDIR)/tools/gen_check_sum sunxi_spl/boot0/boot0_sdcard.bin boot0_sdcard.bin > /dev/null
+ endif
+ ifdef CONFIG_STORAGE_MEDIA_SPINOR
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f sunxi_spl/boot0/boot0_spinor.bin -m boot0
+ 		@$(TOPDIR)/tools/gen_check_sum sunxi_spl/boot0/boot0_spinor.bin boot0_spinor.bin > /dev/null
+ endif
+ sboot:  spl_lib depend
+ 		$(MAKE) -C sunxi_spl/sbrom all
+-		@git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
++		@$(TOPDIR)/fake_git show HEAD --pretty=format:"%H" | head -n 1 > cur.log
+ 		@./add_hash.sh -f sunxi_spl/sbrom/sboot.bin -m sboot
+ 		@$(TOPDIR)/tools/gen_check_sum sunxi_spl/sbrom/sboot.bin sboot.bin > /dev/null
+ 
+@@ -671,7 +671,7 @@ tools-all: easylogo env gdb $(VERSION_FILE)
+ 
+ .PHONY : CHANGELOG
+ CHANGELOG:
+-	git log --no-merges U-Boot-1_1_5.. | \
++	$(TOPDIR)/fake_git log --no-merges U-Boot-1_1_5.. | \
+ 	unexpand -a | sed -e 's/\s\s*$$//' > $@
+ 
+ include/license.h: tools/bin2header COPYING
+diff --git a/board/sunxi/load_check.c b/board/sunxi/load_check.c
+old mode 100755
+new mode 100644
+diff --git a/build.sh b/build.sh
+index 98ebdbb..3c3a86e 100755
+--- a/build.sh
++++ b/build.sh
+@@ -16,10 +16,10 @@ show_help()
+ 
+ build_uboot()
+ {
+-    make ARCH=arm CROSS_COMPILE=arm-clover-linux-gnueabihf- distclean
+-    make ARCH=arm CROSS_COMPILE=arm-clover-linux-gnueabihf- ${PLATFORM}_config
+-    make ARCH=arm CROSS_COMPILE=arm-clover-linux-gnueabihf- CONFIG_SPL=y spl fes -j16
+-    make ARCH=arm CROSS_COMPILE=arm-clover-linux-gnueabihf- -B -j16
++    make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- distclean
++    make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- ${PLATFORM}_config
++    make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- CONFIG_SPL=y spl fes -j1
++    make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -B -j1
+ }
+ 
+ while getopts p:m: OPTION
+diff --git a/common/cmd_sunxi_flash.c b/common/cmd_sunxi_flash.c
+index 77e5580..863f492 100644
+--- a/common/cmd_sunxi_flash.c
++++ b/common/cmd_sunxi_flash.c
+@@ -176,6 +176,27 @@ int do_sunxi_flash(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
+ 
+ 		return ret == 0 ? 1 : 0;
+ 	}
++	else if(strncmp(cmd, "phy_write", strlen("phy_write")) == 0)
++	{
++		skip_init = 1;
++		sunxi_flash_handle_init();
++
++		u32 start_block;
++		u32 rblock;
++
++        printf("write physical\n");
++
++		addr = (ulong)simple_strtoul(argv[2], NULL, 16);
++		start_block = (ulong)simple_strtoul(argv[3], NULL, 16);
++		rblock = (ulong)simple_strtoul(argv[4], NULL, 16);
++
++		ret = sunxi_flash_phywrite(start_block, rblock, (void *)addr);
++
++		tick_printf("sunxi flash phy_write :offset %x, %d sectors %s\n", start_block, rblock,
++		       ret ? "OK" : "ERROR");
++
++		return ret == 0 ? 1 : 0;
++	}
+ 
+ usage:
+ 	return cmd_usage(cmdtp);
+diff --git a/config.mk b/config.mk
+index 42849d5..e560a94 100644
+--- a/config.mk
++++ b/config.mk
+@@ -115,8 +115,8 @@ cc-option = $(shell if $(CC) $(CFLAGS) $(1) -S -o /dev/null -xc /dev/null \
+ #
+ AS	= $(CROSS_COMPILE)as
+ LD	= $(CROSS_COMPILE)ld
+-CC	= $(CROSS_COMPILE)gcc
+-CPP	= $(CC) -E
++CC	= $(CROSS_COMPILE)gcc -std=gnu89
++CPP	= $(CROSS_COMPILE)gcc -E
+ AR	= $(CROSS_COMPILE)ar
+ NM	= $(CROSS_COMPILE)nm
+ LDR	= $(CROSS_COMPILE)ldr
+diff --git a/fake_git b/fake_git
+new file mode 100755
+index 0000000..beb8867
+--- /dev/null
++++ b/fake_git
+@@ -0,0 +1,2 @@
++#!/bin/bash
++echo fc3061df4dbd4153819b2d2f141d82b88fea51cf
+diff --git a/include/configs/clover.h b/include/configs/clover.h
+index a79af7e..467c34f 100644
+--- a/include/configs/clover.h
++++ b/include/configs/clover.h
+@@ -29,6 +29,8 @@
+ #define __KERNEL__
+ #endif
+ 
++#define CONFIG_FINAL
++
+ #define LINUX_MACHINE_ID        4137
+ 
+ #define UBOOT_VERSION			"1.1.0"
+diff --git a/include/linux/compiler-gcc5.h b/include/linux/compiler-gcc5.h
+new file mode 100644
+index 0000000..94dea3f
+--- /dev/null
++++ b/include/linux/compiler-gcc5.h
+@@ -0,0 +1,61 @@
++#ifndef __LINUX_COMPILER_H
++#error "Please don't include <linux/compiler-gcc4.h> directly, include <linux/compiler.h> instead."
++#endif
++
++/* GCC 4.1.[01] miscompiles __weak */
++#ifdef __KERNEL__
++# if __GNUC_MINOR__ == 1 && __GNUC_PATCHLEVEL__ <= 1
++#  error Your version of gcc miscompiles the __weak directive
++# endif
++#endif
++
++#define __used			__attribute__((__used__))
++#define __must_check 		__attribute__((warn_unused_result))
++#define __compiler_offsetof(a,b) __builtin_offsetof(a,b)
++#define __always_inline		inline __attribute__((always_inline))
++
++/*
++ * A trick to suppress uninitialized variable warning without generating any
++ * code
++ */
++#define uninitialized_var(x) x = x
++
++#if __GNUC_MINOR__ >= 3
++/* Mark functions as cold. gcc will assume any path leading to a call
++   to them will be unlikely.  This means a lot of manual unlikely()s
++   are unnecessary now for any paths leading to the usual suspects
++   like BUG(), printk(), panic() etc. [but let's keep them for now for
++   older compilers]
++
++   Early snapshots of gcc 4.3 don't support this and we can't detect this
++   in the preprocessor, but we can live with this because they're unreleased.
++   Maketime probing would be overkill here.
++
++   gcc also has a __attribute__((__hot__)) to move hot functions into
++   a special section, but I don't see any sense in this right now in
++   the kernel context */
++#define __cold			__attribute__((__cold__))
++
++
++#if __GNUC_MINOR__ >= 5
++/*
++ * Mark a position in code as unreachable.  This can be used to
++ * suppress control flow warnings after asm blocks that transfer
++ * control elsewhere.
++ *
++ * Early snapshots of gcc 4.5 don't support this and we can't detect
++ * this in the preprocessor, but we can live with this because they're
++ * unreleased.  Really, we need to have autoconf for the kernel.
++ */
++#define unreachable() __builtin_unreachable()
++#endif
++
++#endif
++
++#if __GNUC_MINOR__ > 0
++#define __compiletime_object_size(obj) __builtin_object_size(obj, 0)
++#endif
++#if __GNUC_MINOR__ >= 4
++#define __compiletime_warning(message) __attribute__((warning(message)))
++#define __compiletime_error(message) __attribute__((error(message)))
++#endif
+diff --git a/sunxi_spl/boot0/main/boot0_main.c b/sunxi_spl/boot0/main/boot0_main.c
+old mode 100755
+new mode 100644
+diff --git a/sunxi_spl/fes_init/main/fes_head.c b/sunxi_spl/fes_init/main/fes_head.c
+index 3cee7f6..0f647d3 100644
+--- a/sunxi_spl/fes_init/main/fes_head.c
++++ b/sunxi_spl/fes_init/main/fes_head.c
+@@ -50,6 +50,17 @@ const boot0_file_head_t  fes1_head = {
+ 							   		      	0, 0, '3','.','0','.','0',0
+ 							   		      },
+ 							 	      },
++					{
++						sizeof(boot0_private_head_t),
++						0,
++						{
++							600,3,0x3bbb,1,
++							283246848,0,
++							7280,64,24,0,
++							0x47a14f,0x1c2294c,0x69049,0x0,0x0,0x0,0x0,
++							0x0,0x0,0x0,0x0,0x0,0xa8,0x10901
++						}
++					}
+ 							 	  };
+ 
+ 
+diff --git a/tools/gen_check_sum b/tools/gen_check_sum
+index 6af1447..5040838 100755
+Binary files a/tools/gen_check_sum and b/tools/gen_check_sum differ

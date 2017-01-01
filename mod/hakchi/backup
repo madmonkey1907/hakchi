@@ -1,0 +1,39 @@
+backup_nandc(){
+  if [ "$cf_backup_nandc" == "y" ]; then
+    echo backup nandc
+    dd if=/dev/nandc bs=128K | gzip > /nandc.gz
+  fi
+  return 0
+}
+
+backup(){
+  backupdir=$installdir/backup
+  if [ -f /nandc.gz ]; then
+    if [ ! -f $backupdir/nandc.gz ]; then
+      echo move nandc
+      mkdir -p $backupdir
+      mv /nandc.gz $backupdir/
+    fi
+  fi
+  if [ "$cf_backup" != "y" ]; then
+    return 0
+  fi
+  mkdir -p $backupdir
+  if [ ! -f $backupdir/nanda.gz ]; then
+    echo backup nanda
+    dd if=/dev/nanda bs=128K | gzip > $backupdir/nanda.gz
+  fi
+  if [ ! -f $backupdir/nandb ]; then
+    echo backup nandb
+    dd if=/dev/nandb bs=128K > $backupdir/nandb
+  fi
+  if [ ! -f $backupdir/nandd.gz ]; then
+    echo backup nandd
+    dd if=/dev/nandd bs=128K | gzip > $backupdir/nandd.gz
+  fi
+  if [ ! -f $backupdir/nande.gz ]; then
+    echo backup nande
+    dd if=/dev/nande bs=128K | gzip > $backupdir/nande.gz
+  fi
+  return 0
+}

@@ -1,0 +1,2 @@
+# /etc/udev/rules.d/
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1f3a", ATTRS{idProduct}=="efe8", MODE:="0666"

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+img=$1
+if [ -z "$img" ]; then
+  img=./dump/kernel.img
+fi
+
+infile=$(basename "$img")
+inpath=./$(basename "$infile" .img)
+
+rm -rf "$inpath"
+mkdir "$inpath"
+unpackbootimg -i "$img" -o "$inpath"
+lzop -d "$inpath/$infile-ramdisk.gz" -o "$inpath/initramfs.cpio"
+mkdir "$inpath/initramfs"
+(cd "$inpath/initramfs";cpio -imd --no-preserve-owner --quiet -I "../initramfs.cpio")

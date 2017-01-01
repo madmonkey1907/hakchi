@@ -1,0 +1,80 @@
+init(){
+echo
+
+modname=hakchi
+mountpoint=/newroot
+installdir=$mountpoint/var/lib/$modname
+rootfs=$installdir/rootfs
+
+. /$modname/config
+. /$modname/backup
+
+backup_nandc
+
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs $mountpoint/var
+mkdir $mountpoint/var/lib
+mount -o defaults,nosuid,nodev,noatime /dev/nandc $mountpoint/var/lib
+
+if [ ! -f $rootfs/etc/preinit ]; then
+  backup
+
+  echo installing $modname...
+
+  rm -rf $rootfs
+  mkdir -p $rootfs/usr/share/games/nes
+
+  cp -a $mountpoint/bin $rootfs/
+  cp -a $mountpoint/etc $rootfs/
+  cp -a $mountpoint/usr/share/games/nes/kachikachi $rootfs/usr/share/games/nes/
+
+  cp -a /$modname/rootfs/* $rootfs/
+  cp -a /bin/busybox $rootfs/bin/
+  cp -a /sbin/cryptsetup $rootfs/bin/
+
+  chroot $rootfs /bin/busybox --install -s /bin/
+
+  if [ "$cf_shutdown" == "y" ]; then
+    cf_shutdown=yy
+  fi
+else
+  echo $modname already installed
+fi
+
+if [ -d $modname/transfer ]; then
+  echo transferring data...
+  if [ -f $modname/transfer/transfer ]; then
+    . $modname/transfer/transfer
+    rm $modname/transfer/transfer
+  else
+    docopy=y
+  fi
+  if [ "$docopy" == "y" ]; then
+    cp -a $modname/transfer/* $installdir/
+  fi
+  if [ "$cf_shutdown" == "y" ]; then
+    cf_shutdown=yy
+  fi
+fi
+
+if [ "$cf_shutdown" == "yy" ]; then
+  echo shutting down...
+  umount $mountpoint/var/lib
+  umount $mountpoint/var
+  poweroff -f
+  return 0
+fi
+
+if [ ! -f $mountpoint/var/lib/clover/profiles/0/CLV-P-NAAAE/1.state ]; then
+  echo loading stock shell
+  umount $mountpoint/var/lib
+  umount $mountpoint/var
+  return 0
+fi
+
+echo loading $modname
+. $rootfs/etc/preinit
+preinit
+return $?
+}
+
+init

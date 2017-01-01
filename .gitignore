@@ -1,0 +1,12 @@
+*.pro.user
+*.img
+bin/mkbootimg
+bin/sntool
+bin/sunxi-fel
+bin/unpackbootimg
+build*/
+kernel*/
+data/
+dump/
+mod/bin/busybox
+mod/hakchi/transfer/
