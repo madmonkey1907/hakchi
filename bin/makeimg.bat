@@ -16,7 +16,7 @@ upx -qq --best "%inpath%\initramfs\sbin\cryptsetup" || cd >nul
 mkbootfs "%inpath%\initramfs" > "%inpath%\initramfs.cpio"
 if %errorlevel% neq 0 goto error
 
-lzop --best -f -o "%inpath%\%infile%-ramdisk.gz" "%inpath%\initramfs.cpio"
+lzop --best -f -o "%inpath%\%infile%-ramdisk.gz" "%inpath%\initramfs.cpio" <nul
 if %errorlevel% neq 0 goto error
 
 set /p cmdline=<"%inpath%\%infile%-cmdline"

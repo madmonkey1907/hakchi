@@ -15,7 +15,7 @@ if %errorlevel% neq 0 goto error
 unpackbootimg -i "%img%" -o "%inpath%"
 if %errorlevel% neq 0 goto error
 
-lzop -d "%inpath%\%infile%-ramdisk.gz" -o "%inpath%\initramfs.cpio"
+lzop -d "%inpath%\%infile%-ramdisk.gz" -o "%inpath%\initramfs.cpio" <nul
 if %errorlevel% neq 0 goto error
 
 md "%inpath%\initramfs"
