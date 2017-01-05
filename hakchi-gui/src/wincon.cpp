@@ -23,9 +23,10 @@ CWinCon::CWinCon(QObject*parent):QObject(parent)
         while((_dup2(filedes[1],STDOUT_FILENO)<0)&&(errno==EINTR)){}
         while((_dup2(filedes[1],STDERR_FILENO)<0)&&(errno==EINTR)){}
         _close(filedes[1]);
+        con=_fdopen(filedes[0],"rb");
+        *stdin=*fopen("nul","rb");
         *stdout=*_fdopen(STDOUT_FILENO,"wb");
         *stderr=*_fdopen(STDERR_FILENO,"wb");
-        con=_fdopen(filedes[0],"rb");
 #else
         while((dup2(filedes[1],STDOUT_FILENO)<0)&&(errno==EINTR)){}
         while((dup2(filedes[1],STDERR_FILENO)<0)&&(errno==EINTR)){}

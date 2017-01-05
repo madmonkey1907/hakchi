@@ -21,8 +21,11 @@ int system_hidden(const char*cmd)
     memset(&pi,0,sizeof(pi));
     si.cb=sizeof(STARTUPINFO);
     si.dwFlags=STARTF_USESTDHANDLES;
+    si.hStdInput=(HANDLE)_get_osfhandle(_fileno(stdin));
     si.hStdOutput=(HANDLE)_get_osfhandle(_fileno(stdout));
-    si.hStdError=(HANDLE)_get_osfhandle(_fileno(stderr));
+    si.hStdError=si.hStdOutput;
+    SetHandleInformation(si.hStdInput,HANDLE_FLAG_INHERIT,HANDLE_FLAG_INHERIT);
+    SetHandleInformation(si.hStdOutput,HANDLE_FLAG_INHERIT,HANDLE_FLAG_INHERIT);
     QString cmdl("cmd /c ");
     cmdl+=QString::fromLocal8Bit(cmd).replace('/','\\');
     if(CreateProcessA(getenv("COMSPEC"),cmdl.toLocal8Bit().data(),0,0,TRUE,NORMAL_PRIORITY_CLASS|CREATE_NO_WINDOW,0,0,&si,&pi))
