@@ -61,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QTimer::singleShot(256,this,SIGNAL(readNext()));
 
     srand(0);
-    printf("Knock, knock ");
+    printf("Knock, knock\n");
 }
 
 MainWindow::~MainWindow()

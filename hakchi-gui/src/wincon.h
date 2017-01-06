@@ -2,6 +2,7 @@
 #define WINCON_H
 
 #include <QObject>
+#include <QString>
 
 class CWinCon:public QObject
 {
@@ -15,6 +16,7 @@ public slots:
     void readOutput();
 private:
     FILE*con;
+    QString str;
 };
 
 #endif // WINCON_H

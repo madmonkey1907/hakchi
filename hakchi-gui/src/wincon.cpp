@@ -49,12 +49,25 @@ CWinCon::~CWinCon()
 
 void CWinCon::readOutput()
 {
+    if(str.length())
+    {
+        emit msg(str.left(1));
+        str=str.right(str.length()-1);
+        return;
+    }
     if(con)
     {
         //fucking windows
-        char buffer[1];
-        ssize_t size=fread(buffer,1,sizeof(buffer),con);
-        if(size>0)
-            emit msg(QString::fromLocal8Bit(buffer,size));
+        char buffer[0x1000];
+        if(fgets(buffer,sizeof(buffer),con))
+        {
+            str=QString::fromLocal8Bit(buffer);
+            if(str.length())
+            {
+                readOutput();
+                return;
+            }
+        }
     }
+    emit msg("\n");
 }
