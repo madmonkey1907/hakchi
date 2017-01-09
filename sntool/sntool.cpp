@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
+#include <include/portable_endian.h>
 
 // #########################################################################
 

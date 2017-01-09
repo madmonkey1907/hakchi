@@ -34,4 +34,4 @@ build/Makefile: hakchi-gui/hakchi-gui.pro
 	@mkdir -p build && (cd build; qmake ../$< CONFIG+=release)
 
 bin/sntool: sntool/sntool.cpp
-	@g++ -std=gnu++11 -Wall -Wextra $< -o $@
+	@g++ -I3rdparty/sunxi-tools -std=gnu++11 -Wall -Wextra $< -o $@

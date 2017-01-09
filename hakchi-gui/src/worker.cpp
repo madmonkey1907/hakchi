@@ -3,10 +3,10 @@
 #include <QDir>
 #include "bootimg.h"
 #include "md5int.h"
+#include <include/portable_endian.h>
 
 #ifdef WIN32
 #include <windows.h>
-#define le32toh(x) (x)
 #endif
 
 static const QString kernelFile("dump/kernel.img");
