@@ -1,19 +1,25 @@
 all: bin/sunxi-fel bin/mkbootimg bin/unpackbootimg mod/bin/busybox build/hakchi-gui bin/sntool
 
+clean:
+	@rm -rf bin/sunxi-fel bin/mkbootimg bin/unpackbootimg bin/sntool
+	@rm -rf build/
+	@make -C 3rdparty/sunxi-tools clean
+	@make -C 3rdparty/mkbootimg clean
+
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
-	@cp 3rdparty/sunxi-tools/sunxi-fel bin/
+	@cp $< bin/
 
 3rdparty/sunxi-tools/sunxi-fel: 3rdparty/sunxi-tools/fel.c
 	@make -C 3rdparty/sunxi-tools sunxi-fel
 
 bin/mkbootimg: 3rdparty/mkbootimg/mkbootimg
-	@cp 3rdparty/mkbootimg/mkbootimg bin/
+	@cp $< bin/
 
 3rdparty/mkbootimg/mkbootimg: 3rdparty/mkbootimg/mkbootimg.c
 	@make -C 3rdparty/mkbootimg
 
 bin/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg
-	@cp 3rdparty/mkbootimg/unpackbootimg bin/
+	@cp $< bin/
 
 3rdparty/mkbootimg/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg.c
 	@make -C 3rdparty/mkbootimg
