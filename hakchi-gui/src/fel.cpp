@@ -258,7 +258,7 @@ size_t Fel::readFlash(uint32_t addr,size_t size,void*buf)
         return 0;
     }
     char cmd[1024];
-    sprintf(cmd,"sunxi_flash phy_read %x %x %x;%s",flash_mem_base,addr/sector_size,(size+addr%sector_size+sector_size-1)/sector_size,fastboot);
+    sprintf(cmd,"sunxi_flash phy_read %x %x %zx;%s",flash_mem_base,addr/sector_size,(size+addr%sector_size+sector_size-1)/sector_size,fastboot);
     if(runUbootCmd(cmd))
     {
         return readMemory(flash_mem_base+addr%sector_size,size,buf);
@@ -291,7 +291,7 @@ size_t Fel::writeFlash(uint32_t addr,size_t size,void*buf)
     if(writeMemory(flash_mem_base,size,buf)==size)
     {
         char cmd[1024];
-        sprintf(cmd,"sunxi_flash phy_write %x %x %x;%s",flash_mem_base,addr/sector_size,size/sector_size,fastboot);
+        sprintf(cmd,"sunxi_flash phy_write %x %x %zx;%s",flash_mem_base,addr/sector_size,size/sector_size,fastboot);
         if(runUbootCmd(cmd))
             return size;
     }
