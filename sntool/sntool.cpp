@@ -52,7 +52,7 @@ int dehex(const char*in,const char*out)
     size_t fs=loadFile(in,0);
     if(fs)
     {
-        printf("input: %s, fs: %u\n",in,fs);
+        printf("input: %s, fs: %zu\n",in,fs);
         uint8_t b_in[fs+16];
         uint8_t b_out[fs+16];
         uint8_t b_tmp[4*1024];
@@ -95,7 +95,7 @@ int dehex(const char*in,const char*out)
                 {
                     char fout[1024];
                     sprintf(fout,"%s_%i.bin",out,++fileNumber);
-                    printf("output: %s, fs: %u\n",fout,outLen);
+                    printf("output: %s, fs: %zu\n",fout,outLen);
                     saveFile(fout,b_out,outLen);
                     outLen=0;
                 }
@@ -115,7 +115,7 @@ int checksum(const char*in,int fix)
     size_t fs=loadFile(in,0);
     if(fs)
     {
-        printf("input: %s, fs: %u\n",in,fs);
+        printf("input: %s, fs: %zu\n",in,fs);
         uint8_t data[fs+3];
         fs=loadFile(in,data);
         uint32_t*data32=reinterpret_cast<uint32_t*>(data);
@@ -164,7 +164,7 @@ int split(const char*in)
     size_t fs=loadFile(in,0);
     if(fs)
     {
-        printf("input: %s, fs: %u\n",in,fs);
+        printf("input: %s, fs: %zu\n",in,fs);
         uint8_t data[fs+3];
         fs=loadFile(in,data);
         while(data[fs-1]==0xff)
@@ -191,8 +191,8 @@ int join(const char*in0,const char*in1)
     size_t fs1=loadFile(in1,0);
     if(fs0&&fs1)
     {
-        printf("input: %s, fs: %u\n",in0,fs0);
-        printf("input: %s, fs: %u\n",in1,fs1);
+        printf("input: %s, fs: %zu\n",in0,fs0);
+        printf("input: %s, fs: %zu\n",in1,fs1);
         uint8_t data[fs0*2+fs1];
         fs0=loadFile(in0,data);
         while(fs0&(0x10000-1))
