@@ -168,7 +168,7 @@ bool Fel::runUbootCmd(const char*str,bool noreturn)
         uboot.doCmd(str);
         uint8_t buf[0x20];
         emit dataFlow(-sizeof(buf));
-        if(!readMemory(uboot_base_m,sizeof(buf),buf)==sizeof(buf))
+        if(readMemory(uboot_base_m,sizeof(buf),buf)!=sizeof(buf))
             return false;
         if(memcmp(buf,uboot.data.data(),sizeof(buf))==0)
         {
