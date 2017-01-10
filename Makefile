@@ -7,25 +7,25 @@ clean:
 	@make -C 3rdparty/mkbootimg clean
 
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
-	@cp $< bin/
+	@cp $< $@
 
 3rdparty/sunxi-tools/sunxi-fel: 3rdparty/sunxi-tools/fel.c
 	@make -C 3rdparty/sunxi-tools sunxi-fel
 
 bin/mkbootimg: 3rdparty/mkbootimg/mkbootimg
-	@cp $< bin/
+	@cp $< $@
 
 3rdparty/mkbootimg/mkbootimg: 3rdparty/mkbootimg/mkbootimg.c
 	@make -C 3rdparty/mkbootimg
 
 bin/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg
-	@cp $< bin/
+	@cp $< $@
 
 3rdparty/mkbootimg/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg.c
 	@make -C 3rdparty/mkbootimg
 
 mod/bin/busybox: 3rdparty/busybox.url
-	wget --no-use-server-timestamps $(shell cat $<) -O $@ && chmod +x $@ && upx -qq --best $@
+	@if [ ! -f $@ ]; then wget --no-use-server-timestamps $(shell cat $<) -O $@ && chmod +x $@ && upx -qq --best $@; else touch $@; fi
 
 build/hakchi-gui: build/Makefile hakchi-gui/src/*
 	@make -C build
