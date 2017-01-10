@@ -2,10 +2,46 @@
 #include <QApplication>
 #include <QDir>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#ifdef WIN32
+#include <windows.h>
+#include <tchar.h>
+#endif
+
+static QFileInfo appFileInfo_init()
+{
+#ifdef WIN32
+    TCHAR buffer[MAX_PATH];
+    buffer[0]=0;
+    GetModuleFileName(GetModuleHandle(0),buffer,MAX_PATH);
+#ifdef UNICODE
+    const QString mfn(QString::fromUtf16((ushort*)buffer));
+#else
+    const QString mfn(QString::fromLocal8Bit(buffer));
+#endif
+    QFileInfo pfi(mfn);
+#else
+    QFileInfo pfi(QFileInfo(QString::fromLatin1("/proc/%1/exe").arg(getpid())).canonicalFilePath());
+#endif
+    return pfi;
+}
+
+static const QFileInfo&appFileInfo()
+{
+    static QFileInfo pfi(appFileInfo_init());
+    return pfi;
+}
+
+QString appPath()
+{
+    return appFileInfo().absolutePath();
+}
 
 int main(int argc,char*argv[])
 {
     QDir dir(".");
+    dir.setCurrent(appPath());
     for(int i=0;i<4;i++)
     {
         if(dir.exists("bin"))
