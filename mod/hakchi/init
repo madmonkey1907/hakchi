@@ -40,16 +40,16 @@ else
   echo $modname already installed
 fi
 
-if [ -d $modname/transfer ]; then
+if [ -d /$modname/transfer ]; then
   echo transferring data...
-  if [ -f $modname/transfer/transfer ]; then
-    . $modname/transfer/transfer
-    rm $modname/transfer/transfer
+  if [ -f /$modname/transfer/transfer ]; then
+    . /$modname/transfer/transfer
+    rm /$modname/transfer/transfer
   else
     docopy=y
   fi
   if [ "$docopy" == "y" ]; then
-    cp -a $modname/transfer/* $installdir/
+    cp -a /$modname/transfer/* $installdir/
   fi
   if [ "$cf_shutdown" == "y" ]; then
     cf_shutdown=yy
