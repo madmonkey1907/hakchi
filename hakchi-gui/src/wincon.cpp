@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #ifdef WIN32
 #include <io.h>
+#include <windows.h>
 #endif
 
 CWinCon::CWinCon(QObject*parent):QObject(parent)
@@ -36,6 +37,20 @@ CWinCon::CWinCon(QObject*parent):QObject(parent)
         setvbuf(stdout,0,_IONBF,0);
         setvbuf(stderr,0,_IONBF,0);
     }
+#ifdef WIN32
+    CPINFOEX cpi;
+    GetCPInfoEx(CP_OEMCP,0,&cpi);
+    switch(cpi.CodePage)
+    {
+    case 866:
+        codec=QTextCodec::codecForName("IBM866");
+        break;
+    default:
+        codec=QTextCodec::codecForName("IBM437");
+    }
+#else
+    codec=QTextCodec::codecForLocale();
+#endif
 }
 
 CWinCon::~CWinCon()
@@ -61,7 +76,7 @@ void CWinCon::readOutput()
         char buffer[0x1000];
         if(fgets(buffer,sizeof(buffer),con))
         {
-            str=QString::fromLocal8Bit(buffer);
+            str=codec->toUnicode(buffer);
             if(str.length())
             {
                 readOutput();

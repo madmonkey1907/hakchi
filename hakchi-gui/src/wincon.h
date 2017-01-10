@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QTextCodec>
 
 class CWinCon:public QObject
 {
@@ -17,6 +18,7 @@ public slots:
 private:
     FILE*con;
     QString str;
+    QTextCodec*codec;
 };
 
 #endif // WINCON_H
