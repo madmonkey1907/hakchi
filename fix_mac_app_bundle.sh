@@ -1,14 +1,11 @@
 #!/bin/bash
 
 BINARY=build/hakchi-gui.app
-FRAMEW_FOLDER=$BINARY/Contents/Frameworks/
 DYLIBBUNDLER=3rdparty/macdylibbundler/dylibbundler
 
 $DYLIBBUNDLER -x $BINARY/Contents/MacOS/hakchi-gui -b -cd -d $BINARY/Contents/libs
 
-if [ ! -d "$FRAMEW_FOLDER" ]; then
-    mkdir $FRAMEW_FOLDER
-fi
+macdeployqt $BINARY
 
 cp -rf bin $BINARY/Contents/MacOS/bin
 cp -rf udev $BINARY/Contents/MacOS/udev
