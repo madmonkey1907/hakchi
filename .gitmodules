@@ -1,6 +1,6 @@
 [submodule "3rdparty/mkbootimg"]
 	path = 3rdparty/mkbootimg
-	url = git@github.com:osm0sis/mkbootimg.git
+	url = https://github.com/osm0sis/mkbootimg
 [submodule "3rdparty/sunxi-tools"]
 	path = 3rdparty/sunxi-tools
-	url = git@github.com:linux-sunxi/sunxi-tools.git
+	url = https://github.com/linux-sunxi/sunxi-tools
