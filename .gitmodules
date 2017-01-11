@@ -4,3 +4,6 @@
 [submodule "3rdparty/sunxi-tools"]
 	path = 3rdparty/sunxi-tools
 	url = https://github.com/linux-sunxi/sunxi-tools
+[submodule "3rdparty/macdylibbundler"]
+	path = 3rdparty/macdylibbundler
+	url = https://github.com/auriamg/macdylibbundler

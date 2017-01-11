@@ -8,6 +8,10 @@
 #include <windows.h>
 #include <tchar.h>
 #endif
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#include <QURL>
+#endif
 
 static QFileInfo appFileInfo_init()
 {
@@ -20,6 +24,11 @@ static QFileInfo appFileInfo_init()
 #else
     const QString mfn(QString::fromLocal8Bit(buffer));
 #endif
+    QFileInfo pfi(mfn);
+#elif __APPLE__
+    CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
+    QString mfn = (QUrl::fromCFURL(url).path());
+    mfn += "Contents/MacOS/";
     QFileInfo pfi(mfn);
 #else
     QFileInfo pfi(QFileInfo(QString::fromLatin1("/proc/%1/exe").arg(getpid())).canonicalFilePath());

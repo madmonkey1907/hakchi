@@ -11,6 +11,17 @@ git submodule update
 
 ## Install the build dependencies
 
+### Mac OS X 10.12
+
+If you don't already have homebrew installed on your Mac:
+
+```
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install
+```
+
+brew install libusb qt
+brew link qt --force
+
 ### Ubuntu 16.04
 
 
