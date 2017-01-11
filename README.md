@@ -32,3 +32,19 @@ brew link qt --force
 patch ./3rdparty/sunxi-tools/fel_lib.c < ./3rdparty/sunxi-tools.diff
 make
 ```
+
+
+# Execute
+
+## Linux
+
+```
+build/hakchi-gui
+```
+
+
+## macOS
+
+```
+open build/hakchi-gui.app
+```
