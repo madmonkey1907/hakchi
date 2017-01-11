@@ -6,6 +6,12 @@ clean:
 	@make -C 3rdparty/sunxi-tools clean
 	@make -C 3rdparty/mkbootimg clean
 
+patch:
+	patch ./3rdparty/sunxi-tools/fel_lib.c < ./3rdparty/sunxi-tools.diff
+
+unpatch:
+	git --work-tree=3rdparty/sunxi-tools --git-dir=3rdparty/sunxi-tools/.git checkout -f - fel_lib.c
+
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
 	@cp $< $@
 
