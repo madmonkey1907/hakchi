@@ -15,12 +15,13 @@ git submodule update
 
 
 ```
-sudo apt-get install libusb-1.0-0-dev libqt4-dev libudev-dev
+sudo apt-get install libusb-1.0-0-dev libqt4-dev libudev-dev upx-ucl
 ```
 
 
 # Build
 
 ```
+patch ./3rdparty/sunxi-tools/fel_lib.c < ./3rdparty/sunxi-tools.diff
 make
 ```
