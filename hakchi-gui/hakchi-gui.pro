@@ -5,8 +5,12 @@ TEMPLATE=app
 
 INCLUDEPATH+=$${PWD}/../3rdparty/sunxi-tools $${PWD}/../3rdparty/sunxi-tools/include $${PWD}/../3rdparty/mkbootimg
 DEPENDPATH+=$${PWD}/src $${PWD}/../3rdparty/sunxi-tools $${PWD}/../3rdparty/sunxi-tools/include
+static{
 LIBS += $$system(pkg-config --libs \"libusb-1.0 >= 1.0.0\" --static)
-QMAKE_CFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu99 -DNDEBUG -Wall -Wextra
+}else{
+LIBS += $$system(pkg-config --libs \"libusb-1.0 >= 1.0.0\")
+}
+QMAKE_CFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu99 -DNDEBUG -Wall -Wextra -Wno-error
 QMAKE_CXXFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -Wall -Wextra
 
 macx {

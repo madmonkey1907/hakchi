@@ -19,40 +19,29 @@ If you don't already have homebrew installed on your Mac:
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install
 ```
 
-brew install libusb qt
+brew install libusb qt wget upx cpio lzop wget
 brew link qt --force
 
 ### Ubuntu 16.04
 
-
 ```
-sudo apt-get install libusb-1.0-0-dev libqt4-dev libudev-dev upx-ucl
-```
-
-
-### macOS
-
-```
-brew install libusb qt wget upx
-brew link qt --force
+sudo apt-get install libusb-1.0-0-dev libqt4-dev upx-ucl cpio lzop wget
 ```
 
 # Build
 
 ```
-make patch
 make
 ```
-
 
 # Execute
 
 ## Linux
 
 ```
-build/hakchi-gui
+. importpath
+hakchi-gui
 ```
-
 
 ## macOS
 

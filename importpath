@@ -1,4 +1,8 @@
 if [ -z "$(which felboot)" ]; then
-  export PATH=$(pwd)/bin:$(pwd)/build:$PATH
-  echo PATH=$PATH
+  if [ -x bin/felboot ]; then
+    export PATH=$(pwd)/bin:$(pwd)/build:$PATH
+    echo PATH=$PATH
+  else
+    echo bin/felboot not found
+  fi
 fi

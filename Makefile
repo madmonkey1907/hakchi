@@ -1,55 +1,59 @@
-all: bin/sunxi-fel bin/mkbootimg bin/unpackbootimg mod/bin/busybox build/macdylibbundler build/hakchi-gui bin/sntool
+all: bin/sunxi-fel bin/mkbootimg bin/unpackbootimg mod/bin/busybox build/hakchi-gui bin/sntool
 
-clean:
-	@rm -rf bin/sunxi-fel bin/mkbootimg bin/unpackbootimg bin/sntool
+ifndef SYSTEMROOT
+ifeq ($(shell uname), Darwin)
+build/hakchi-gui: build/macdylibbundler
+endif
+endif
+
+.PHONY: all clean patch unpatch
+
+clean: unpatch
+	@cd bin && rm -rf sunxi-fel mkbootimg unpackbootimg sntool
 	@rm -rf build/
-	@make -C 3rdparty/sunxi-tools clean
-	@make -C 3rdparty/mkbootimg clean
+	@$(MAKE) -C 3rdparty/sunxi-tools clean
+	@$(MAKE) -C 3rdparty/mkbootimg clean
 
 patch:
-	patch ./3rdparty/sunxi-tools/fel_lib.c < ./3rdparty/sunxi-tools.diff
+	@cd 3rdparty/sunxi-tools && if git diff --quiet; then git apply ../sunxi-tools.diff; fi
 
 unpatch:
-	git --work-tree=3rdparty/sunxi-tools --git-dir=3rdparty/sunxi-tools/.git checkout -f - fel_lib.c
+	@cd 3rdparty/sunxi-tools && git checkout .
 
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
 	@cp $< $@
 
 3rdparty/sunxi-tools/sunxi-fel: 3rdparty/sunxi-tools/fel.c
-	@make -C 3rdparty/sunxi-tools sunxi-fel
+	@$(MAKE) -C $(<D) $(@F)
 
 bin/mkbootimg: 3rdparty/mkbootimg/mkbootimg
 	@cp $< $@
 
 3rdparty/mkbootimg/mkbootimg: 3rdparty/mkbootimg/mkbootimg.c
-	@make -C 3rdparty/mkbootimg
+	@$(MAKE) -C $(<D)
 
 bin/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg
 	@cp $< $@
 
 3rdparty/mkbootimg/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg.c
-	@make -C 3rdparty/mkbootimg
+	@$(MAKE) -C $(<D)
 
 mod/bin/busybox: 3rdparty/busybox.url
-	@if [ ! -f $@ ]; then wget --no-use-server-timestamps $(shell cat $<) -O $@ && chmod +x $@ && upx -qq --best $@; else touch $@; fi
+	@if [ ! -x $@ ]; then wget --no-use-server-timestamps $(shell cat $<) -O $@ && upx -qq --best $@ && chmod +x $@; else touch $@; fi
 
-build/hakchi-gui: build/Makefile hakchi-gui/src/*
-	@make -C build
+build/hakchi-gui: build/Makefile hakchi-gui/src/* patch
+	@$(MAKE) -C build
 ifndef SYSTEMROOT
 ifeq ($(shell uname), Darwin)
-	sh fix_mac_app_bundle.sh
-endif
-endif
-
-build/macdylibbundler: 3rdparty/macdylibbundler/*
-ifndef SYSTEMROOT
-ifeq ($(shell uname), Darwin)
-	@make -C 3rdparty/macdylibbundler/
+	@sh fix_mac_app_bundle.sh
 endif
 endif
 
 build/Makefile: hakchi-gui/hakchi-gui.pro
 	@mkdir -p build && (cd build; qmake ../$< CONFIG+=release)
+
+build/macdylibbundler: 3rdparty/macdylibbundler/*
+	@$(MAKE) -C $(<D)
 
 bin/sntool: sntool/sntool.cpp
 	@g++ -I3rdparty/sunxi-tools -std=gnu++11 -Wall -Wextra $< -o $@
