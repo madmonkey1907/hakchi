@@ -10,3 +10,4 @@ data/
 dump/
 mod/bin/busybox
 mod/hakchi/transfer/
+.DS_Store

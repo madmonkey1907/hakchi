@@ -9,6 +9,13 @@ LIBS += $$system(pkg-config --libs \"libusb-1.0 >= 1.0.0\" --static)
 QMAKE_CFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu99 -DNDEBUG -Wall -Wextra
 QMAKE_CXXFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -Wall -Wextra
 
+macx {
+    CONFIG += plugin
+    QMAKE_LFLAGS_PLUGIN -= -dynamiclib
+    QMAKE_LFLAGS_PLUGIN += -bundle
+    MAKE_EXTENSION_SHLIB = bundle
+}
+
 SOURCES += $${PWD}/../3rdparty/sunxi-tools/fel_lib.c
 SOURCES += $${PWD}/../3rdparty/sunxi-tools/soc_info.c
 SOURCES += $${PWD}/../3rdparty/sunxi-tools/progress.c

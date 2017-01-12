@@ -1,4 +1,4 @@
-all: bin/sunxi-fel bin/mkbootimg bin/unpackbootimg mod/bin/busybox build/hakchi-gui bin/sntool
+all: bin/sunxi-fel bin/mkbootimg bin/unpackbootimg mod/bin/busybox build/macdylibbundler build/hakchi-gui bin/sntool
 
 clean:
 	@rm -rf bin/sunxi-fel bin/mkbootimg bin/unpackbootimg bin/sntool
@@ -35,6 +35,18 @@ mod/bin/busybox: 3rdparty/busybox.url
 
 build/hakchi-gui: build/Makefile hakchi-gui/src/*
 	@make -C build
+ifndef SYSTEMROOT
+ifeq ($(shell uname), Darwin)
+	sh fix_mac_app_bundle.sh
+endif
+endif
+
+build/macdylibbundler: 3rdparty/macdylibbundler/*
+ifndef SYSTEMROOT
+ifeq ($(shell uname), Darwin)
+	@make -C 3rdparty/macdylibbundler/
+endif
+endif
 
 build/Makefile: hakchi-gui/hakchi-gui.pro
 	@mkdir -p build && (cd build; qmake ../$< CONFIG+=release)
