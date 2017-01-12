@@ -19,9 +19,32 @@ sudo apt-get install libusb-1.0-0-dev libqt4-dev libudev-dev upx-ucl
 ```
 
 
+### macOS
+
+```
+brew install libusb qt wget upx
+brew link qt --force
+```
+
 # Build
 
 ```
 make patch
 make
+```
+
+
+# Execute
+
+## Linux
+
+```
+build/hakchi-gui
+```
+
+
+## macOS
+
+```
+open build/hakchi-gui.app
 ```
