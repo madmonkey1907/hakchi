@@ -134,7 +134,7 @@ index 0000000..beb8867
 +#!/bin/bash
 +echo fc3061df4dbd4153819b2d2f141d82b88fea51cf
 diff --git a/include/configs/clover.h b/include/configs/clover.h
-index a79af7e..467c34f 100644
+index a79af7e..dc95ab4 100644
 --- a/include/configs/clover.h
 +++ b/include/configs/clover.h
 @@ -29,6 +29,8 @@
@@ -146,6 +146,20 @@ index a79af7e..467c34f 100644
  #define LINUX_MACHINE_ID        4137
  
  #define UBOOT_VERSION			"1.1.0"
+@@ -299,11 +301,11 @@
+ #ifdef CONFIG_FINAL
+ #define CONFIG_NAND_BOOT_PART_START_BLOCK 48 // ~6MiB reserved for boot0 + uboot
+ #define CONFIG_NAND_BOOT_PART_BLOCK_COUNT 32 // ~4MiB reserved for boot partition
+-#define CONFIG_BOOTCOMMAND "sunxi_flash phy_read 43800000 30 20;boota 43800000"
++#define CONFIG_BOOTCOMMAND "sunxi_flash phy_read 43800000 30 20;boota 43800000        "
+ #else
+ #define CONFIG_NAND_BOOT_PART_START_BLOCK 48 // ~6MiB reserved for boot0 + uboot
+ #define CONFIG_NAND_BOOT_PART_BLOCK_COUNT 64 // ~8MiB reserved for boot partition
+-#define CONFIG_BOOTCOMMAND "sunxi_flash phy_read 43800000 30 40;boota 43800000"
++#define CONFIG_BOOTCOMMAND "sunxi_flash phy_read 43800000 30 40;boota 43800000        "
+ #endif
+ 
+ #ifndef CONFIG_FINAL
 diff --git a/include/linux/compiler-gcc5.h b/include/linux/compiler-gcc5.h
 new file mode 100644
 index 0000000..94dea3f

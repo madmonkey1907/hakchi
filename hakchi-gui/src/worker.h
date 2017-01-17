@@ -13,6 +13,7 @@ public:
     {
         dumpUboot,
         dumpKernel,
+        dumpNandFull,
         unpackKernel,
         packKernel,
         flashKernel,
@@ -36,6 +37,7 @@ private:
     bool init();
     void do_dumpUboot();
     void do_dumpKernel();
+    void do_dumpNandFull();
     void do_unpackKernel();
     void do_packKernel();
     void do_flashKernel();

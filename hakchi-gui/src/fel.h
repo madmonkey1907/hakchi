@@ -22,15 +22,14 @@ struct uboot_t
 
 #define fes1_base_m 0x2000u
 #define dram_base 0x40000000u
-#define uboot_base_m 0x47000000u
+#define uboot_base_m (dram_base+0x7000000u)
 #define uboot_base_f 0x100000u
-#define flash_mem_base 0x43800000u
-#define flash_mem_size 0x20u
 #define sector_size 0x20000u
 #define kernel_base_f (sector_size*0x30)
-#define kernel_base_m flash_mem_base
-#define kernel_max_size (uboot_base_m-flash_mem_base)
-#define kernel_max_flash_size (sector_size*0x20)
+#define kernel_maxsize_f (sector_size*0x20)
+#define transfer_base_m (dram_base+0x7400000u)
+#define transfer_maxsize_m (dram_base+0x10000000u-transfer_base_m)
+#define transfer_maxsize_f (transfer_maxsize_m/sector_size)
 
 class Fel:public QObject
 {

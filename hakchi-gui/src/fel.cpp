@@ -7,7 +7,7 @@ extern "C" {
 #include <stdio.h>
 
 struct FeldevHandle:public feldev_handle{};
-static const char*fastboot="fastboot_test";
+static const char*fastboot="efex_test";
 
 struct spFree
 {
@@ -81,12 +81,15 @@ bool Fel::init()
         }
 #endif
         dev=static_cast<FeldevHandle*>(feldev_open(-1,-1,AW_USB_VENDOR_ID,AW_USB_PRODUCT_ID));
-        while((dev!=0)&&(dev->soc_info->soc_id!=0x1667))
+        int i=0;
+        while((dev!=0)&&(dev->soc_info->soc_id!=0x1667)&&((++i)<4))
         {
             release();
             sleep(2);
             dev=static_cast<FeldevHandle*>(feldev_open(-1,-1,AW_USB_VENDOR_ID,AW_USB_PRODUCT_ID));
         }
+        if((dev!=0)&&(dev->soc_info->soc_id!=0x1667))
+            release();
     }
     return dev!=0;
 }
@@ -99,7 +102,7 @@ bool Fel::initDram(bool force)
     uint8_t buf[0x80];
     if((size_t)fes1bin.size()<sizeof(buf))
         return false;
-    if(!force)emit dataFlow(-sizeof(buf));
+    if(!force)emit dataFlow(0-sizeof(buf));
     if((force)||(readMemory(fes1_base_m+fes1bin.size()-sizeof(buf),sizeof(buf),buf)==sizeof(buf)))
     {
         if((!force)&&(memcmp(buf,fes1bin.data()+fes1bin.size()-sizeof(buf),sizeof(buf))==0))
@@ -107,15 +110,15 @@ bool Fel::initDram(bool force)
             dramInitOk=true;
             return true;
         }
-        printf("uploading fes1.bin ...");
-        emit dataFlow(-fes1bin.size());
+        printf("uploading fes1.bin ...\n");
+        emit dataFlow(0-fes1bin.size());
         if(writeMemory(fes1_base_m,fes1bin.size(),fes1bin.data())==(size_t)fes1bin.size())
         {
-            printf(" done\n");
+            printf("done\n");
             dramInitOk=true;
             return runCode(fes1_base_m,2);
         }
-        printf(" failed\n");
+        printf("failed\n");
     }
     return false;
 }
@@ -152,10 +155,12 @@ bool Fel::runCode(uint32_t addr,uint32_t s)
             dramInitOk=false;
             return true;
         }
-        sleep(s);
-        for(int i=0;i<8;i++)
-            if(init())
-                break;
+        if(s>0)
+        {
+            printf("waiting %u seconds...\n",s);
+            sleep(s);
+            printf("done\n");
+        }
         return init();
     }
     return false;
@@ -167,27 +172,27 @@ bool Fel::runUbootCmd(const char*str,bool noreturn)
     {
         uboot.doCmd(str);
         uint8_t buf[0x20];
-        emit dataFlow(-sizeof(buf));
+        emit dataFlow(0-sizeof(buf));
         if(readMemory(uboot_base_m,sizeof(buf),buf)!=sizeof(buf))
             return false;
         if(memcmp(buf,uboot.data.data(),sizeof(buf))==0)
         {
             size_t size=(uboot.cmd.size()+3)/4;
             size*=4;
-            emit dataFlow(-size);
+            emit dataFlow(0-size);
             if(writeMemory(uboot_base_m+uboot.cmdOffset,size,uboot.data.data()+uboot.cmdOffset)!=size)
                 return false;
         }
         else
         {
-            printf("uploading uboot.bin ...");
-            emit dataFlow(-uboot.data.size());
+            printf("uploading uboot.bin ...\n");
+            emit dataFlow(0-uboot.data.size());
             if(writeMemory(uboot_base_m,uboot.data.size(),uboot.data.data())!=(size_t)uboot.data.size())
             {
-                printf(" failed\n");
+                printf("failed\n");
                 return false;
             }
-            printf(" done\n");
+            printf("done\n");
         }
         printf("%s\n",str);
         return runCode(uboot_base_m,noreturn?0xffffffff:10);
@@ -195,7 +200,7 @@ bool Fel::runUbootCmd(const char*str,bool noreturn)
     return false;
 }
 
-static const size_t maxTransfer=0x10000;
+static const size_t maxTransfer=0x20000;
 
 size_t Fel::readMemory(uint32_t addr,size_t size,void*buf)
 {
@@ -245,23 +250,23 @@ size_t Fel::readFlash(uint32_t addr,size_t size,void*buf)
 {
     if((!init())||(!haveUboot()))
         return 0;
-    if(((size+addr%sector_size+sector_size-1)/sector_size)>flash_mem_size)
+    if(((size+addr%sector_size+sector_size-1)/sector_size)>transfer_maxsize_f)
     {
-        size_t sectors=(size+addr%sector_size+sector_size-1)/sector_size-flash_mem_size;
+        size_t sectors=(size+addr%sector_size+sector_size-1)/sector_size-transfer_maxsize_f;
         size_t read=readFlash(addr,sectors*sector_size-addr%sector_size,buf);
         addr+=read;
         size-=read;
         buf=static_cast<uint8_t*>(buf)+read;
     }
-    if(((size+addr%sector_size+sector_size-1)/sector_size)>flash_mem_size)
+    if(((size+addr%sector_size+sector_size-1)/sector_size)>transfer_maxsize_f)
     {
         return 0;
     }
     char cmd[1024];
-    sprintf(cmd,"sunxi_flash phy_read %x %x %zx;%s",flash_mem_base,addr/sector_size,(size+addr%sector_size+sector_size-1)/sector_size,fastboot);
+    sprintf(cmd,"sunxi_flash phy_read %x %x %zx;%s",transfer_base_m,addr/sector_size,(size+addr%sector_size+sector_size-1)/sector_size,fastboot);
     if(runUbootCmd(cmd))
     {
-        return readMemory(flash_mem_base+addr%sector_size,size,buf);
+        return readMemory(transfer_base_m+addr%sector_size,size,buf);
     }
     return 0;
 }
@@ -274,9 +279,9 @@ size_t Fel::writeFlash(uint32_t addr,size_t size,void*buf)
         return 0;
     if((size%sector_size)!=0)
         return 0;
-    if((size/sector_size)>flash_mem_size)
+    if((size/sector_size)>transfer_maxsize_f)
     {
-        size_t sectors=(size/sector_size)-flash_mem_size;
+        size_t sectors=(size/sector_size)-transfer_maxsize_f;
         size_t write=writeFlash(addr,sectors*sector_size,buf);
         if((write%sector_size)!=0)
             return 0;
@@ -284,14 +289,14 @@ size_t Fel::writeFlash(uint32_t addr,size_t size,void*buf)
         size-=write;
         buf=static_cast<uint8_t*>(buf)+write;
     }
-    if((size/sector_size)>flash_mem_size)
+    if((size/sector_size)>transfer_maxsize_f)
     {
         return 0;
     }
-    if(writeMemory(flash_mem_base,size,buf)==size)
+    if(writeMemory(transfer_base_m,size,buf)==size)
     {
         char cmd[1024];
-        sprintf(cmd,"sunxi_flash phy_write %x %x %zx;%s",flash_mem_base,addr/sector_size,size/sector_size,fastboot);
+        sprintf(cmd,"sunxi_flash phy_write %x %x %zx;%s",transfer_base_m,addr/sector_size,size/sector_size,fastboot);
         if(runUbootCmd(cmd))
             return size;
     }

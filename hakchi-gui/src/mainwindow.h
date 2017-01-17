@@ -30,6 +30,7 @@ private slots:
     void on_actionFlash_kernel_triggered();
     void on_actionMemboot_triggered();
     void on_actionShutdown_triggered();
+    void on_actionDump_nand_triggered();
 
 private:
     Ui::MainWindow*ui;

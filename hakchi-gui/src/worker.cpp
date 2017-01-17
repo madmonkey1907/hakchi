@@ -55,6 +55,21 @@ int saveFile(const char*fileName,void*X,size_t fs)
     return rv;
 }
 
+int appendFile(const char*fileName,void*X,size_t fs)
+{
+    int rv=0;
+    FILE*hf=fopen(fileName,"ab");
+    if(hf)
+    {
+        if(fwrite(X,1,fs,hf)==fs)
+        {
+            rv=1;
+        }
+        fclose(hf);
+    }
+    return rv;
+}
+
 size_t loadFile(const char*fileName,void*X)
 {
     size_t fs=0;
@@ -125,6 +140,9 @@ void Worker::doWork(int work)
     case dumpKernel:
         do_dumpKernel();
         break;
+    case dumpNandFull:
+        do_dumpNandFull();
+        break;
     case unpackKernel:
         do_unpackKernel();
         break;
@@ -160,8 +178,10 @@ void Worker::calcProgress(int flow)
     progressFlow+=flow;
     if((progressFlow>0)&&(progressTotal>0))
     {
-        int p=qMin(100*progressFlow/progressTotal,100);
-        emit progress(p);
+        int64_t p=100;
+        p*=progressFlow;
+        p/=progressTotal;
+        emit progress(qMin(p,100ll));
     }
 }
 
@@ -197,7 +217,7 @@ void Worker::do_dumpUboot()
         size=le32toh(*reinterpret_cast<uint32_t*>(buf.data()+0x14u));
     else
         return;
-    if((size==0)||(size>kernel_max_size))
+    if((size==0)||(size>transfer_maxsize_m))
     {
         printf("uboot: invalid size in header\n");
         return;
@@ -234,7 +254,7 @@ static size_t kernelSize(const QByteArray&data)
         pages+=(h->second_size+h->page_size-1)/h->page_size;
         pages+=(h->dt_size+h->page_size-1)/h->page_size;
         size_t ks=pages*h->page_size;
-        if(ks<=kernel_max_size)
+        if(ks<=transfer_maxsize_m)
             size=ks;
     }
     return size;
@@ -253,7 +273,7 @@ void Worker::do_dumpKernel()
         size=kernelSize(buf);
     else
         return;
-    if((size==0)||(size>kernel_max_size))
+    if((size==0)||(size>transfer_maxsize_m))
     {
         printf("kernel: invalid size in header\n");
         return;
@@ -274,6 +294,61 @@ void Worker::do_dumpKernel()
     uint8_t md5[16];
     md5calc(buf.data(),size,md5);
     char md5str[40];
+    printf("%s\n",md5print(md5,md5str));
+    printf("%s - OK\n",Q_FUNC_INFO);
+}
+
+void Worker::do_dumpNandFull()
+{
+    if((!init())||(!fel->haveUboot()))
+    {
+        return;
+    }
+    const size_t block=0x2000000;
+    const size_t count=0x10;
+    calcProgress(0-(block*count));
+    const QString nandFile("dump/nand.bin");
+    QDir(".").mkdir("dump");
+    size_t fs=loadFile(nandFile.toLocal8Bit(),0);
+    size_t offset=0;
+    md5context context;
+    md5init(&context);
+    QByteArray buf(block,Qt::Uninitialized);
+    if((fs>0)&&((fs%block)==0)&&(fs<(block*count)))
+    {
+        FILE*hf=fopen(nandFile.toLocal8Bit(),"rb");
+        if(hf)
+        {
+            while(fread(buf.data(),1,block,hf)==block)
+            {
+                md5update(&context,buf.data(),block);
+                calcProgress(block);
+                offset+=block;
+            }
+            fclose(hf);
+        }
+        printf("%zuM done, continuing\n",fs/0x100000);
+    }
+    else
+    {
+        QDir(".").remove(nandFile);
+    }
+    uint8_t md5[16];
+    char md5str[40];
+    while(offset<(block*count))
+    {
+        if(fel->readFlash(offset,block,buf.data())!=block)
+        {
+            printf("nand: read error\n");
+            return;
+        }
+        appendFile(nandFile.toLocal8Bit(),buf.data(),block);
+        offset+=block;
+        md5update(&context,buf.data(),block);
+        md5calc(buf.data(),block,md5);
+        printf("%s\n",md5print(md5,md5str));
+    }
+    md5final(&context,md5);
     printf("%s\n",md5print(md5,md5str));
     printf("%s - OK\n",Q_FUNC_INFO);
 }
@@ -308,7 +383,7 @@ void Worker::do_flashKernel()
         return;
     }
     size_t ksize=kernelSize(k);
-    if((ksize>(size_t)k.size())||((size_t)k.size()>kernel_max_flash_size))
+    if((ksize>(size_t)k.size())||((size_t)k.size()>kernel_maxsize_f))
     {
         printf("kernel: invalid size in header\n");
         return;
@@ -339,26 +414,14 @@ void Worker::do_flashKernel()
     else
         printf("kernel: verify fuck\n");
 #if 0
-    if(fel->writeFlash(sector_size*(0x30+0x20-2),sector_size,k.data())==sector_size)
-    {
-        QByteArray baver(sector_size,Qt::Uninitialized);
-        if(fel->readFlash(sector_size*(0x30+0x20-2),sector_size,baver.data())==sector_size)
-        {
-            if(memcmp(k.data(),baver.data(),sector_size)==0)
-                f_printf("kernel: ok\n");
-            else
-                f_printf("kernel: fuck\n");
-        }
-        return;
-    }
-#endif
     char cmd[1024];
-    sprintf(cmd,"boota %x",kernel_base_m);
+    sprintf(cmd,"boota %x",transfer_base_m);
     if(!fel->runUbootCmd(cmd,true))
     {
         printf("kernel: runcmd error\n");
         return;
     }
+#endif
     printf("%s - OK\n",Q_FUNC_INFO);
 }
 
@@ -375,19 +438,19 @@ void Worker::do_memboot()
         return;
     }
     const size_t ksize=kernelSize(k);
-    if((ksize>(size_t)k.size())||((size_t)k.size()>kernel_max_size))
+    if((ksize>(size_t)k.size())||((size_t)k.size()>transfer_maxsize_m))
     {
         printf("kernel: invalid size in header\n");
         return;
     }
     calcProgress(-k.size());
-    if(fel->writeMemory(kernel_base_m,k.size(),k.data())!=(size_t)k.size())
+    if(fel->writeMemory(transfer_base_m,k.size(),k.data())!=(size_t)k.size())
     {
         printf("kernel: write error\n");
         return;
     }
     char cmd[1024];
-    sprintf(cmd,"boota %x",kernel_base_m);
+    sprintf(cmd,"boota %x",transfer_base_m);
     if(!fel->runUbootCmd(cmd,true))
     {
         printf("kernel: runcmd error\n");

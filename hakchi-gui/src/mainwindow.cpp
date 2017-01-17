@@ -139,3 +139,8 @@ void MainWindow::on_actionShutdown_triggered()
 {
     emit doWork(Worker::shutdown);
 }
+
+void MainWindow::on_actionDump_nand_triggered()
+{
+    emit doWork(Worker::dumpNandFull);
+}
