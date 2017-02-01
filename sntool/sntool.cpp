@@ -212,6 +212,36 @@ int join(const char*in0,const char*in1)
 
 // #########################################################################
 
+int hsqs(const char*in0)
+{
+    size_t fs0=loadFile(in0,0);
+    if(fs0)
+    {
+        printf("input: %s, fs: %zu\n",in0,fs0);
+        uint8_t*data=static_cast<uint8_t*>(malloc(fs0));
+        if(data)
+        {
+            fs0=loadFile(in0,data);
+            uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+            if(le32toh(data32[0])==0x73717368)
+            {
+                uint32_t bs=0x1000;//le32toh(data32[3]);
+                uint32_t fs1=le32toh(data32[0xa]);
+                fs1=((fs1+bs-1)/bs)*bs;
+                printf("output fs: %zu\n",fs1);
+                if(fs1<fs0)
+                    saveFile(in0,data,fs1);
+                free(data);
+                return 0;
+            }
+            free(data);
+        }
+    }
+    return 1;
+}
+
+// #########################################################################
+
 int main(int argc,const char*argv[])
 {
     int ret=0;
@@ -239,6 +269,11 @@ int main(int argc,const char*argv[])
             const char*in0=(argc>(i+1))?(++i,argv[i]):"uboot.bin";
             const char*in1=(argc>(i+1))?(++i,argv[i]):"script.bin";
             ret+=join(in0,in1);
+        }
+        if(strcmp(argv[i],"hsqs")==0)
+        {
+            const char*in0=(argc>(i+1))?(++i,argv[i]):"rootfs.hsqs";
+            ret+=hsqs(in0);
         }
     }
 }

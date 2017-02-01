@@ -10,8 +10,8 @@ LIBS += $$system(pkg-config --libs \"libusb-1.0 >= 1.0.0\" --static)
 }else{
 LIBS += $$system(pkg-config --libs \"libusb-1.0 >= 1.0.0\")
 }
-QMAKE_CFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu99 -DNDEBUG -Wall -Wextra -Wno-error
-QMAKE_CXXFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -Wall -Wextra
+QMAKE_CFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu99 -DNDEBUG -Wall -Wextra -Wno-return-type
+QMAKE_CXXFLAGS += $$system(pkg-config --cflags \"libusb-1.0 >= 1.0.0\") -std=gnu++11 -Wall -Wextra
 
 macx {
     CONFIG += plugin

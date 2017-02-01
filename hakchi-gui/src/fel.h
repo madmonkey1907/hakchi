@@ -35,7 +35,7 @@ class Fel:public QObject
 {
     Q_OBJECT
 public:
-    Fel(QObject*parent=0);
+    explicit Fel(QObject*parent=0);
     ~Fel();
     bool init();
     bool initDram(bool force=false);

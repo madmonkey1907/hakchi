@@ -102,7 +102,7 @@ bool Fel::initDram(bool force)
     uint8_t buf[0x80];
     if((size_t)fes1bin.size()<sizeof(buf))
         return false;
-    if(!force)emit dataFlow(0-sizeof(buf));
+    if(!force)emit dataFlow(0-int(sizeof(buf)));
     if((force)||(readMemory(fes1_base_m+fes1bin.size()-sizeof(buf),sizeof(buf),buf)==sizeof(buf)))
     {
         if((!force)&&(memcmp(buf,fes1bin.data()+fes1bin.size()-sizeof(buf),sizeof(buf))==0))
@@ -111,7 +111,7 @@ bool Fel::initDram(bool force)
             return true;
         }
         printf("uploading fes1.bin ...\n");
-        emit dataFlow(0-fes1bin.size());
+        emit dataFlow(0-int(fes1bin.size()));
         if(writeMemory(fes1_base_m,fes1bin.size(),fes1bin.data())==(size_t)fes1bin.size())
         {
             printf("done\n");
@@ -172,21 +172,21 @@ bool Fel::runUbootCmd(const char*str,bool noreturn)
     {
         uboot.doCmd(str);
         uint8_t buf[0x20];
-        emit dataFlow(0-sizeof(buf));
+        emit dataFlow(0-int(sizeof(buf)));
         if(readMemory(uboot_base_m,sizeof(buf),buf)!=sizeof(buf))
             return false;
         if(memcmp(buf,uboot.data.data(),sizeof(buf))==0)
         {
             size_t size=(uboot.cmd.size()+3)/4;
             size*=4;
-            emit dataFlow(0-size);
+            emit dataFlow(0-int(size));
             if(writeMemory(uboot_base_m+uboot.cmdOffset,size,uboot.data.data()+uboot.cmdOffset)!=size)
                 return false;
         }
         else
         {
             printf("uploading uboot.bin ...\n");
-            emit dataFlow(0-uboot.data.size());
+            emit dataFlow(0-int(uboot.data.size()));
             if(writeMemory(uboot_base_m,uboot.data.size(),uboot.data.data())!=(size_t)uboot.data.size())
             {
                 printf("failed\n");
@@ -214,7 +214,7 @@ size_t Fel::readMemory(uint32_t addr,size_t size,void*buf)
         {
             size_t b=qMin(transfer,maxTransfer);
             aw_fel_read(dev,addr,buf,b);
-            emit dataFlow(b);
+            emit dataFlow(int(b));
             addr+=b;
             buf=((uint8_t*)buf)+b;
             transfer-=b;
@@ -236,7 +236,7 @@ size_t Fel::writeMemory(uint32_t addr,size_t size,void*buf)
         {
             size_t b=qMin(transfer,maxTransfer);
             aw_fel_write(dev,buf,addr,b);
-            emit dataFlow(b);
+            emit dataFlow(int(b));
             addr+=b;
             buf=((uint8_t*)buf)+b;
             transfer-=b;

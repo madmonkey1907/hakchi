@@ -6,7 +6,7 @@ build/hakchi-gui: build/macdylibbundler
 endif
 endif
 
-.PHONY: all clean patch unpatch
+.PHONY: all clean patch unpatch submodule
 
 clean: unpatch
 	@cd bin && rm -rf sunxi-fel mkbootimg unpackbootimg sntool
@@ -19,6 +19,9 @@ patch:
 
 unpatch:
 	@cd 3rdparty/sunxi-tools && git checkout .
+
+submodule:
+	@git submodule update --init
 
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
 	@cp $< $@
@@ -39,7 +42,7 @@ bin/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg
 	@$(MAKE) -C $(<D)
 
 mod/bin/busybox: 3rdparty/busybox.url
-	@if [ ! -x $@ ]; then wget --no-use-server-timestamps $(shell cat $<) -O $@ && upx -qq --best $@ && chmod +x $@; else touch $@; fi
+	@if [ ! -x $@ ]; then mkdir -p $(@D); if wget --no-use-server-timestamps $(shell cat $<) -O $@; then chmod +x $@ && upx -qq --best $@; else rm -rf $@; fi; else touch $@; fi
 
 build/hakchi-gui: build/Makefile hakchi-gui/src/* patch
 	@$(MAKE) -C build
@@ -56,4 +59,4 @@ build/macdylibbundler: 3rdparty/macdylibbundler/*
 	@$(MAKE) -C $(<D)
 
 bin/sntool: sntool/sntool.cpp
-	@g++ -I3rdparty/sunxi-tools -std=gnu++11 -Wall -Wextra $< -o $@
+	@$(CROSS_COMPILE)g++ -I3rdparty/sunxi-tools -std=gnu++11 -Wall -Wextra $< -o $@

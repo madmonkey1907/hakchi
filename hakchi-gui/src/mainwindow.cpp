@@ -11,7 +11,7 @@
 class CThreadWaiter
 {
 public:
-    CThreadWaiter(QObject*o)
+    explicit CThreadWaiter(QObject*o=0)
     {
         obj=o;
         thread=new QThread();

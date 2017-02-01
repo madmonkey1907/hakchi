@@ -1,13 +1,15 @@
 init(){
 echo
+/bin/busybox --install -s /bin/
 
 modname=hakchi
+modpath=/$modname
 mountpoint=/newroot
 installdir=$mountpoint/var/lib/$modname
 rootfs=$installdir/rootfs
 
-. /$modname/config
-. /$modname/backup
+. $modpath/config
+. $modpath/backup
 
 backup_nandc
 
@@ -27,7 +29,7 @@ if [ ! -f $rootfs/etc/preinit ]; then
   cp -a $mountpoint/etc $rootfs/
   cp -a $mountpoint/usr/share/games/nes/kachikachi $rootfs/usr/share/games/nes/
 
-  cp -a /$modname/rootfs/* $rootfs/
+  cp -a $modpath/rootfs/* $rootfs/
   cp -a /bin/busybox $rootfs/bin/
   cp -a /sbin/cryptsetup $rootfs/bin/
 
@@ -40,16 +42,16 @@ else
   echo $modname already installed
 fi
 
-if [ -d /$modname/transfer ]; then
-  echo transferring data...
-  if [ -f /$modname/transfer/transfer ]; then
-    . /$modname/transfer/transfer
-    rm /$modname/transfer/transfer
+if [ -d $modpath/transfer ]; then
+  if [ -f $modpath/transfer/transfer ]; then
+    . $modpath/transfer/transfer
+    rm $modpath/transfer/transfer
   else
     docopy=y
   fi
   if [ "$docopy" == "y" ]; then
-    cp -a /$modname/transfer/* $installdir/
+    echo transferring data...
+    cp -a $modpath/transfer/* $installdir/
   fi
   if [ "$cf_shutdown" == "y" ]; then
     cf_shutdown=yy

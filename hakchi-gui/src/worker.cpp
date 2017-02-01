@@ -181,7 +181,7 @@ void Worker::calcProgress(int flow)
         int64_t p=100;
         p*=progressFlow;
         p/=progressTotal;
-        emit progress(qMin(p,100ll));
+        emit progress(qMin(p,INT64_C(100)));
     }
 }
 

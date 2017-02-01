@@ -1,19 +1,20 @@
 backup_nandc(){
+  backupdir=$installdir/backup
   if [ "$cf_backup_nandc" == "y" ]; then
-    echo backup nandc
-    dd if=/dev/nandc bs=128K | gzip > /nandc.gz
+    if [ ! -f $backupdir/nandc.gz ]; then
+      echo backup nandc
+      dd if=/dev/nandc bs=128K | gzip > $modpath/nandc.gz
+    fi
   fi
   return 0
 }
 
 backup(){
   backupdir=$installdir/backup
-  if [ -f /nandc.gz ]; then
-    if [ ! -f $backupdir/nandc.gz ]; then
-      echo move nandc
-      mkdir -p $backupdir
-      mv /nandc.gz $backupdir/
-    fi
+  if [ -f $modpath/nandc.gz ]; then
+    echo move nandc
+    mkdir -p $backupdir
+    mv $modpath/nandc.gz $backupdir/
   fi
   if [ "$cf_backup" != "y" ]; then
     return 0
