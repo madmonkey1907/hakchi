@@ -1,0 +1,30 @@
+source "$modpath/script/backup"
+source "$modpath/script/install"
+source "$modpath/script/package"
+
+backup_nandc
+mount_base
+backup
+
+[ -f "$preinitpath/p0000_config" ] && source "$preinitpath/p0000_config"
+
+if [ -f "$preinit" ]; then
+  echo $modname already installed
+  mod_repair
+else
+  mod_install
+fi
+
+transferpath=$modpath/transfer
+packs_install "$transferpath"
+packs_install "$transferpath/hmod"
+transfer_path "$transferpath"
+
+source "$modpath/script/transfer-first"
+source "$modpath/script/transfer-gui"
+source "$modpath/script/transfer-last"
+
+[ -f "$temppath/config.tmp" ] && source "$temppath/config.tmp"
+
+source "$preinitpath/pffff_config"
+[ "$cf_shutdown" != "y" ] || shutdown

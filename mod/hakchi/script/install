@@ -1,0 +1,25 @@
+mod_uninstall(){
+  echo uninstalling $modname...
+  rm -rf "$rootfs"
+  echo done.
+  shutdown
+}
+
+mod_repair(){
+  restore "/etc/clover/"
+  restore "/etc/issue"
+  rm -f "$modpath/rootfs/etc/preinit.d/p0000_config"
+  rsync -ac "$modpath/rootfs/" "$rootfs/"
+  rsync -ac "/bin/" "$rootfs/bin/"
+  rsync -ac "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
+}
+
+mod_install(){
+  echo installing $modname...
+  rm -rf "$rootfs"
+  restore "/bin/"
+  restore "/etc/"
+  restore "/usr/share/clover-ui/resources/"
+  restore "/usr/share/games/nes/kachikachi/"
+  mod_repair
+}

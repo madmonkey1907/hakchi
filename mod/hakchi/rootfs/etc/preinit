@@ -1,8 +1,17 @@
+rand(){
+  hexdump -e '"%x"' -n 4 /dev/urandom
+}
+
+source_parts(){
+  script=$temppath/script_$(rand)
+  rm -f "$script"
+  for i in $(find $(dirname "$1") -maxdepth 1 -path "$1" | sort); do
+    cat "$i" >> "$script"
+  done
+  source "$script"
+  rm -f "$script"
+}
+
 preinit(){
-
-mount -o bind $rootfs/bin $mountpoint/bin
-mount -o bind $rootfs/etc $mountpoint/etc
-mount -o bind $rootfs/usr/share/games/nes/kachikachi $mountpoint/usr/share/games/nes/kachikachi
-
-return 0
+  source_parts "$preinitpath/p????_*"
 }

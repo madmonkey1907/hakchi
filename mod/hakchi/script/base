@@ -1,0 +1,25 @@
+mount_base(){
+  mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var"
+  mkdir -p "$mountpoint/var/lib"
+  mount -o defaults,nosuid,nodev,noatime /dev/nandc "$mountpoint/var/lib"
+}
+
+umount_base(){
+  umount "$mountpoint/var/lib"
+  umount "$mountpoint/var"
+}
+
+shutdown(){
+  echo shutting down...
+  umount -a
+  poweroff -f
+  while :;do :;done
+}
+
+restore(){
+  rsync -ac "$mountpoint$1" "$rootfs$1"
+}
+
+overmount(){
+  mount -o bind "$rootfs$1" "$mountpoint$1"
+}

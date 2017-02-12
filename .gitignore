@@ -1,13 +1,12 @@
 *.pro.user
 *.img
-bin/mkbootimg
 bin/sntool
-bin/sunxi-fel
-bin/unpackbootimg
+bin/*bootimg
+bin/sunxi-*
 build*/
 kernel*/
 data/
 dump/
-mod/bin/busybox
+mod/bin/
 mod/hakchi/transfer/
 .DS_Store

@@ -5,78 +5,29 @@ echo
 modname=hakchi
 modpath=/$modname
 mountpoint=/newroot
-installdir=$mountpoint/var/lib/$modname
-rootfs=$installdir/rootfs
+installpath=$mountpoint/var/lib/$modname
+rootfs=$installpath/rootfs
+preinit=$rootfs/etc/preinit
+preinitpath=$preinit.d
+temppath=/tmp
 
-. $modpath/config
-. $modpath/backup
+mkdir -p "$temppath"
 
-backup_nandc
+source "$modpath/config"
+source "$modpath/script/base"
 
-mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs $mountpoint/var
-mkdir $mountpoint/var/lib
-mount -o defaults,nosuid,nodev,noatime /dev/nandc $mountpoint/var/lib
-
-if [ ! -f $rootfs/etc/preinit ]; then
-  backup
-
-  echo installing $modname...
-
-  rm -rf $rootfs
-  mkdir -p $rootfs/usr/share/games/nes
-
-  cp -a $mountpoint/bin $rootfs/
-  cp -a $mountpoint/etc $rootfs/
-  cp -a $mountpoint/usr/share/games/nes/kachikachi $rootfs/usr/share/games/nes/
-
-  cp -a $modpath/rootfs/* $rootfs/
-  cp -a /bin/busybox $rootfs/bin/
-  cp -a /sbin/cryptsetup $rootfs/bin/
-
-  chroot $rootfs /bin/busybox --install -s /bin/
-
-  if [ "$cf_shutdown" == "y" ]; then
-    cf_shutdown=yy
-  fi
+if [ -d "$modpath/transfer" ]; then
+  source "$modpath/script/transfer"
 else
-  echo $modname already installed
+  mount_base
 fi
 
-if [ -d $modpath/transfer ]; then
-  if [ -f $modpath/transfer/transfer ]; then
-    . $modpath/transfer/transfer
-    rm $modpath/transfer/transfer
-  else
-    docopy=y
-  fi
-  if [ "$docopy" == "y" ]; then
-    echo transferring data...
-    cp -a $modpath/transfer/* $installdir/
-  fi
-  if [ "$cf_shutdown" == "y" ]; then
-    cf_shutdown=yy
-  fi
+if [ -f "$preinit" ]; then
+  source "$preinit"
+  preinit
+else
+  umount_base
 fi
-
-if [ "$cf_shutdown" == "yy" ]; then
-  echo shutting down...
-  umount $mountpoint/var/lib
-  umount $mountpoint/var
-  poweroff -f
-  return 0
-fi
-
-if [ ! -f $mountpoint/var/lib/clover/profiles/0/CLV-P-NAAAE/1.state ]; then
-  echo loading stock shell
-  umount $mountpoint/var/lib
-  umount $mountpoint/var
-  return 0
-fi
-
-echo loading $modname
-. $rootfs/etc/preinit
-preinit
-return $?
 }
 
 init

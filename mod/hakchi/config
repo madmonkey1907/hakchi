@@ -1,3 +1,4 @@
-cf_shutdown=y
-cf_backup=n
-cf_backup_nandc=n
+cf_backup_dummy='n'
+cf_backup='n'
+cf_backup_nandc='n'
+cf_shutdown='y'
