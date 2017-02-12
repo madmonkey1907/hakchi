@@ -45,6 +45,9 @@ pack_install(){
     find . -type l -print0 | xargs -0 -I{} echo rm -f \"\$installpath/{}\" >> "$transferpath/uninstall"
     find . -type f -print0 | xargs -0 -I{} echo rm -f \"\$installpath/{}\" >> "$transferpath/uninstall"
     find . -depth -type d -print0 | xargs -0 -I{} echo rmdir \"\$installpath/{}\" >> "$transferpath/uninstall"
+    cat "$transferpath/uninstall" | sed "s#rmdir \"\$installpath/\.\"#echo#" > "$transferpath/uninstall.1"
+    cat "$transferpath/uninstall.1" | sed "s#\"\$installpath/\.#\"\$installpath#" > "$transferpath/uninstall"
+    rm -f "$transferpath/uninstall.1"
   fi
   cd /
   unfile=$(pack_upath "$1")
