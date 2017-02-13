@@ -39,7 +39,7 @@ if [ "$hakchi_partial_first" == "y" ]; then
     find $rootfs/usr/share/games/nes/kachikachi -name *.desktop -exec sed -i -e 's/--enable-armet//g' {} +
   fi
 
-  if [ -f $hakchi_extra_script ]; then
+  if [ -f "$hakchi_extra_script" ]; then
     echo Executing extra script...
     source $hakchi_extra_script
   fi

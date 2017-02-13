@@ -15,16 +15,18 @@ else
   mod_install
 fi
 
-transferpath=$modpath/transfer
+local transferpath=$modpath/transfer
 packs_install "$transferpath"
-packs_install "$transferpath/hmod"
+if [ -d "$transferpath/hmod" ]; then
+  packs_install "$transferpath/hmod"
+  rm -rf "$transferpath/hmod"
+fi
+echo transferring data...
 transfer_path "$transferpath"
 
 source "$modpath/script/transfer-first"
 source "$modpath/script/transfer-gui"
 source "$modpath/script/transfer-last"
-
-[ -f "$temppath/config.tmp" ] && source "$temppath/config.tmp"
 
 source "$preinitpath/pffff_config"
 [ "$cf_shutdown" != "y" ] || shutdown

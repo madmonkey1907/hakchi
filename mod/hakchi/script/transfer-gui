@@ -1,6 +1,6 @@
-if [ -f $installdir/menu ]; then
+if [ -f $installpath/menu ]; then
   echo Erasing last menu state...
-  rm $installdir/menu
+  rm $installpath/menu
 fi
 
 if [ "$hakchi_remove_games" == "y" ] && [ "$hakchi_partial_first" == "y" ]; then
@@ -52,7 +52,7 @@ if [ "$hakchi_remove_armet_all" == "y" ] && [ "$hakchi_partial_last" == "y" ]; t
   find $rootfs/usr/share/games/nes/kachikachi -name *.desktop -exec sed -i -e 's/--enable-armet//g' {} +
 fi
 
-if [ -f $hakchi_extra_args_file ] && [ "$hakchi_partial_last" == "y" ]; then
+if [ -f "$hakchi_extra_args_file" ] && [ "$hakchi_partial_last" == "y" ]; then
   echo Appending extra command line arguments...
   find $rootfs/usr/share/games/nes/kachikachi -name *.desktop -exec awk -v cfile="$hakchi_extra_args_file" 'BEGIN{getline c < cfile} /Exec=\/usr\//{$0=$0 " " c} {l[ln++]=$0} END{for(i=0;i<ln;i++) print l[i]>ARGV[1]}' {} +
 fi
@@ -60,11 +60,12 @@ fi
 if [ "$hakchi_partial_first" == "y" ]; then
   if [ -d /transfer ]; then
     echo Transferring extra data...
-    cp -a /transfer/* $installdir/
+    cp -a /transfer/* $installpath/
   fi
 fi
 
-if [ -f $hakchi_extra_script ]; then
+if [ -f "$hakchi_extra_script" ]; then
+  echo 1
   echo Executing extra script...
-  . $hakchi_extra_script
+  . "$hakchi_extra_script"
 fi

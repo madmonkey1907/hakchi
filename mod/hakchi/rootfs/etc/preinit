@@ -3,7 +3,7 @@ rand(){
 }
 
 source_parts(){
-  script=$temppath/script_$(rand)
+  local script=$temppath/script_$(rand)
   rm -f "$script"
   for i in $(find $(dirname "$1") -maxdepth 1 -path "$1" | sort); do
     cat "$i" >> "$script"

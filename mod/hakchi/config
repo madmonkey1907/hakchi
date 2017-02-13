@@ -1,4 +1,4 @@
-cf_backup_dummy='n'
-cf_backup='n'
-cf_backup_nandc='n'
-cf_shutdown='y'
+local cf_backup_dummy='n'
+local cf_backup='n'
+local cf_backup_nandc='n'
+local cf_shutdown='y'

@@ -9,11 +9,28 @@ umount_base(){
   umount "$mountpoint/var"
 }
 
+remount_root(){
+  local tmpmount=$modpath/var.tmp
+  mkdir -p "$tmpmount"
+  mount --move "$mountpoint/var" "$tmpmount"
+
+  umount "$mountpoint"
+
+  local loopfile=$tmpmount${1##$mountpoint/var}
+  mount -o loop,ro "$loopfile" "$mountpoint" || shutdown
+
+  mount --move "$tmpmount" "$mountpoint/var"
+}
+
 shutdown(){
   echo shutting down...
   umount -a
   poweroff -f
   while :;do :;done
+}
+
+early_getty(){
+  getty -ni 115200 ttyS0 -l /bin/sh
 }
 
 restore(){

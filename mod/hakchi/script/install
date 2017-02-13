@@ -19,7 +19,6 @@ mod_install(){
   rm -rf "$rootfs"
   restore "/bin/"
   restore "/etc/"
-  restore "/usr/share/clover-ui/resources/"
-  restore "/usr/share/games/nes/kachikachi/"
+  restore "$gamepath/"
   mod_repair
 }
