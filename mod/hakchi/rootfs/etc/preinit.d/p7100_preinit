@@ -1,3 +1,7 @@
-overmount /bin
-overmount /etc
-overmount "$gamepath"
+overmount_all(){
+  overmount /bin
+  overmount /etc
+  overmount "$gamepath"
+}
+
+[ "$cfg_boot_stock" == "y" ] || overmount_all
