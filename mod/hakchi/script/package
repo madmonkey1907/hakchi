@@ -1,7 +1,10 @@
 transfer_file(){
   [ -f "$1" ] || return 0
   dos2unix -u "$1"
-  source "$1"
+  guard_ud(){
+    source "$1"
+  }
+  guard_ud "$1"
   res=$?
   rm -f "$1"
   return $res
