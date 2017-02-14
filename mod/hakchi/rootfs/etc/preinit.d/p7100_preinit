@@ -1,7 +1,7 @@
 overmount_all(){
-  overmount /bin
-  overmount /etc
-  overmount "$gamepath"
+  overmount "/bin"
+  overmount "/etc"
+  overmount "/usr/bin"
 }
 
 [ "$cfg_boot_stock" == "y" ] || overmount_all

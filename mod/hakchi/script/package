@@ -3,6 +3,7 @@ transfer_file(){
   dos2unix -u "$1"
   guard_ud(){
     source "$1"
+    return 0
   }
   guard_ud "$1"
   res=$?
@@ -47,16 +48,11 @@ pack_install(){
   transfer_path "$transferpath"
   mkdir -p "$installpath/hmod"
   if [ ! -f "$transferpath/uninstall" ]; then
+    echo creating uninstall for $(basename "$1" .hmod)...
     cd "$transferpath"
-    for i in $(find . -type l); do
-      echo rm -f \"\$installpath/$i\" >> "$transferpath/uninstall"
-    done
-    for i in $(find . -type f); do
-      echo rm -f \"\$installpath/$i\" >> "$transferpath/uninstall"
-    done
-    for i in $(find . -depth -type d); do
-      echo rmdir \"\$installpath/$i\" >> "$transferpath/uninstall"
-    done
+    find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+    find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+    find . -depth -type d -exec echo rmdir \"\$installpath/{}\" + >> "$transferpath/uninstall"
     sed -i "s#rmdir \"\$installpath/\.\"#echo#" "$transferpath/uninstall"
     sed -i "s#\"\$installpath/\.#\"\$installpath#" "$transferpath/uninstall"
     [ $(stat -c%s "$transferpath/uninstall") -gt 8 ] || rm -f "$transferpath/uninstall"
@@ -66,11 +62,11 @@ pack_install(){
   if [ -f "$transferpath/uninstall" ]; then
     dos2unix -u "$transferpath/uninstall"
     sed -i "s#rmdir #rmdir --ignore-fail-on-non-empty #" "$transferpath/uninstall"
-    rsync -ac "$transferpath/uninstall" "$unfile"
+    copy "$transferpath/uninstall" "$unfile"
   else
     rm -f "$unfile"
   fi
-  rm -rf "$1"
+  echo package $(basename "$1" .hmod) installed
 }
 
 pack_uninstall(){
@@ -81,15 +77,27 @@ pack_uninstall(){
       done
     fi
   else
-    echo uninstalling $(basename "$1" .hmod)...
     local unfile=$(pack_upath "$1")
-    transfer_file "$unfile"
+    if [ -f "$unfile" ]; then
+      echo uninstalling $(basename "$1" .hmod)...
+      transfer_file "$unfile"
+      echo package $(basename "$1" .hmod) uninstalled
+    fi
   fi
   rmdir --ignore-fail-on-non-empty "$installpath/hmod"
 }
 
 packs_install(){
+  [ -d "$1" ] || return 1
   for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
     pack_install "$i"
+    rm -rf "$1"
+  done
+}
+
+packs_uninstall(){
+  [ -d "$1" ] || return 1
+  for i in $@; do
+    pack_uninstall "$i"
   done
 }

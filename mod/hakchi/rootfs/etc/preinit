@@ -9,7 +9,9 @@ source_parts(){
     cat "$i" >> "$script"
   done
   source "$script"
+  local ret=$?
   rm -f "$script"
+  return $ret
 }
 
 preinit(){

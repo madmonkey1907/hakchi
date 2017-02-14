@@ -1,6 +1,7 @@
 source "$modpath/script/backup"
 source "$modpath/script/install"
 source "$modpath/script/package"
+source "$modpath/script/games"
 
 backup_nandc
 mount_base
@@ -16,17 +17,20 @@ else
 fi
 
 local transferpath=$modpath/transfer
+
+packs_uninstall $(cat "$transferpath/uninstall")
+packs_uninstall $(cat "$transferpath/hmod/uninstall")
+
 packs_install "$transferpath"
 if [ -d "$transferpath/hmod" ]; then
   packs_install "$transferpath/hmod"
   rm -rf "$transferpath/hmod"
 fi
+
+transfer_games "$transferpath/games"
+
 echo transferring data...
 transfer_path "$transferpath"
-
-source "$modpath/script/transfer-first"
-source "$modpath/script/transfer-gui"
-source "$modpath/script/transfer-last"
 
 source "$preinitpath/pffff_config"
 [ "$cf_shutdown" != "y" ] || shutdown
