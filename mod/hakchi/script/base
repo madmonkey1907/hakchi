@@ -11,7 +11,7 @@ umount_base(){
 
 shutdown(){
   echo Shutting down...
-  umount_base
+  umount -a
   poweroff -f
   while :;do :;done
 }

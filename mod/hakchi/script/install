@@ -8,13 +8,11 @@ mod_uninstall(){
 mod_repair(){
   restore "/etc/clover"
   restore "/etc/issue"
-  copy "$modpath/rootfs/" "$rootfs/"
-	mkdir -p "$installpath/script/"
+	copy "$modpath/rootfs/" "$rootfs/"
 	copy "$modpath/script/" "$installpath/script/"
 	copy "/bin/" "$rootfs/bin/"
   copy "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
 	chmod +x $rootfs/bin/*
-	chmod +x $rootfs/usr/bin/*
 
 	# This file required by hakchi2 kernel...
 	echo hakchi_enabled=y > $temppath/config

@@ -25,6 +25,4 @@ rm -rf $modspath/hmod
 transfer_games "$modspath/games"
 transfer_path "$transferpath"
 
-# Uploaded via transport pffff_config has higher priority
-[ -f "$preinitpath/p0000_config" ] && source "$preinitpath/p0000_config"
 source "$preinitpath/pffff_config"

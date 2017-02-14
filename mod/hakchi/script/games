@@ -39,10 +39,10 @@ transfer_games(){
 	[ -d "$1" ] || return 1
 	target_dir=$rootfs/usr/share/games/nes/kachikachi
 	# Flag to remove all installed games
-	if [ -f "$1/clean" ]; then
+	if [ -f "$1/clear" ]; then
 		echo Removing games...
 		rm -rf $target_dir/CLV-*
-		rm "$1/clean"
+		rm "$1/clear"
 	fi
 	mkdir -p "$target_dir"
 	# But we need fonts
@@ -51,5 +51,7 @@ transfer_games(){
 	transfer_original_games "$1/original"
 	echo Transfering new games...
 	# This is simple
-	copy "$1/CLV-*" "$target_dir"
+	copy "$1/*" "$target_dir"
+	# Need to reset menu state
+	rm -f $installpath/menu
 }
