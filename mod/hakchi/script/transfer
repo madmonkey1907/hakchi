@@ -27,7 +27,10 @@ if [ -d "$transferpath/hmod" ]; then
   rm -rf "$transferpath/hmod"
 fi
 
-transfer_games "$transferpath/games"
+if [ -d "$transferpath/games" ]; then
+  transfer_games "$transferpath/games"
+  rm -rf "$transferpath/games"
+fi
 
 echo transferring data...
 transfer_path "$transferpath"
