@@ -1,6 +1,7 @@
 source "$modpath/script/backup"
 source "$modpath/script/install"
 source "$modpath/script/package"
+source "$modpath/script/games"
 
 backup_nandc
 mount_base
@@ -15,16 +16,15 @@ else
   mod_install
 fi
 
-transferpath=$modpath/transfer
-packs_install "$transferpath"
-packs_install "$transferpath/hmod"
+modspath=$modpath/transfer
+packs_uninstall "$modspath/uninstall"
+packs_uninstall "$modspath/hmod/uninstall"
+packs_install "$modspath"
+packs_install "$modspath/hmod"
+rm -rf $modspath/hmod
+transfer_games "$modspath/games"
 transfer_path "$transferpath"
 
-source "$modpath/script/transfer-first"
-source "$modpath/script/transfer-gui"
-source "$modpath/script/transfer-last"
-
-[ -f "$temppath/config.tmp" ] && source "$temppath/config.tmp"
-
+# Uploaded via transport pffff_config has higher priority
+[ -f "$preinitpath/p0000_config" ] && source "$preinitpath/p0000_config"
 source "$preinitpath/pffff_config"
-[ "$cf_shutdown" != "y" ] || shutdown

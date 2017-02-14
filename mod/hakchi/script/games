@@ -1,0 +1,55 @@
+transfer_original_games(){
+	[ -d "$1" ] || return 1
+	echo Transfering original games...
+	# Using temporary directory for original games
+	tmp_games=/tmp/original_games
+	mkdir -p "$tmp_games"	
+	copy "$mountpoint/usr/share/games/nes/kachikachi/CLV-*" "$tmp_games"
+	# Patching games to use our wrapper
+	find $tmp_games/* -name *.desktop -exec sed -i -e 's/clover-kachikachi/clover-kachikachi-wr/g' {} +
+	# We need to decide game distanation directory, so we can't just copy all games at once
+	for dir in $tmp_games/*; do
+		if [ -d $dir ]; then
+			code=`echo $dir | sed "s/.*\///"`
+			# File "hidden" contains list of unwanted original games, so we need to check it
+			if [ -f $1/hidden ] && grep -q $code $1/hidden; then
+				echo $code is hidden
+				rm -rf $tmp_games/$code
+			else
+				# Now we trying to get destination directory
+				if [ -f "$1/gpath-$code" ]; then
+					dist=`cat "$1/gpath-$code"`
+					mkdir -p "$tmp_games/$dist"
+					echo Moving $code to $dist folder
+					mv "$tmp_games/$code" "$tmp_games/$dist"
+					rm "$1/gpath-$code"
+				else					
+					echo There is no path file for $code, moved to root
+				fi
+			fi
+		fi
+	done
+	# Now we can write games to flash
+	copy "$tmp_games/*" "$target_dir"
+	rm -rf "$tmp_games"
+	rm -rf "$1"
+}
+
+transfer_games(){
+	[ -d "$1" ] || return 1
+	target_dir=$rootfs/usr/share/games/nes/kachikachi
+	# Flag to remove all installed games
+	if [ -f "$1/clean" ]; then
+		echo Removing games...
+		rm -rf $target_dir/CLV-*
+		rm "$1/clean"
+	fi
+	mkdir -p "$target_dir"
+	# But we need fonts
+	restore "/usr/share/games/nes/kachikachi/title.fnt"
+	restore "/usr/share/games/nes/kachikachi/copyright.fnt"
+	transfer_original_games "$1/original"
+	echo Transfering new games...
+	# This is simple
+	copy "$1/CLV-*" "$target_dir"
+}

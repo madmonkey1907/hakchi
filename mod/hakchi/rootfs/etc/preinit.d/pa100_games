@@ -1,0 +1,8 @@
+menu_code=000
+[ -f $installdir/menu ] && menu_code=`cat $installdir/menu`
+echo Menu code: $menu_code
+if [ "$menu_code" == "000" ]; then
+	overmount rootfs/usr/share/games/nes/kachikachi /usr/share/games/nes/kachikachi
+else
+	overmount rootfs/usr/share/games/nes/kachikachi/$menu_code /usr/share/games/nes/kachikachi
+fi

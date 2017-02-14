@@ -6,20 +6,28 @@ mod_uninstall(){
 }
 
 mod_repair(){
-  restore "/etc/clover/"
+  restore "/etc/clover"
   restore "/etc/issue"
-  rm -f "$modpath/rootfs/etc/preinit.d/p0000_config"
-  rsync -ac "$modpath/rootfs/" "$rootfs/"
-  rsync -ac "/bin/" "$rootfs/bin/"
-  rsync -ac "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
+  copy "$modpath/rootfs/" "$rootfs/"
+	mkdir -p "$installpath/script/"
+	copy "$modpath/script/" "$installpath/script/"
+	copy "/bin/" "$rootfs/bin/"
+  copy "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
+	chmod +x $rootfs/bin/*
+	chmod +x $rootfs/usr/bin/*
+
+	# This file required by hakchi2 kernel...
+	echo hakchi_enabled=y > $temppath/config
+	copy $temppath/config $installpath
 }
 
 mod_install(){
-  echo installing $modname...
+  echo Installing $modname...
   rm -rf "$rootfs"
-  restore "/bin/"
   restore "/etc/"
-  restore "/usr/share/clover-ui/resources/"
-  restore "/usr/share/games/nes/kachikachi/"
+	restore "/bin/"
+	restore "/usr/bin/"
   mod_repair
+	chroot $rootfs /bin/busybox --install -s /bin/
+	echo $hakchi_version > $version_file
 }

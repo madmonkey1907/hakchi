@@ -1,6 +1,3 @@
-echo loading $modname
-
 overmount /bin
+overmount /usr/bin
 overmount /etc
-overmount /usr/share/clover-ui/resources
-overmount /usr/share/games/nes/kachikachi

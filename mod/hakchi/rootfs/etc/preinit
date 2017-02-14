@@ -13,5 +13,17 @@ source_parts(){
 }
 
 preinit(){
+	modname=hakchi
+	modpath=/$modname
+	mountpoint=/newroot
+	installpath=$mountpoint/var/lib/$modname
+	rootfs=$installpath/rootfs
+	preinit=$rootfs/etc/preinit
+	preinitpath=$preinit.d
+
+	echo Starting $modname
+
+	mount -o bind $rootfs/bin /bin
+	source "$installpath/script/base"
   source_parts "$preinitpath/p????_*"
 }

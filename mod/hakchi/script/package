@@ -1,28 +1,25 @@
 transfer_file(){
-  [ -f "$1" ] || return 0
-  [ -f "$temppath/config.tmp" ] && source "$temppath/config.tmp"
+  [ -f "$1" ] || return 1
   source "$1"
-  res=$?
-  rm -f "$1"
-  set | grep -F cfg_ > "$temppath/config.tmp"
-  return $res
+  return $?
 }
 
 transfer_default(){
-  echo transferring data...
-  rsync -ac --exclude "/uninstall" "$transferpath/" "$installpath/"
+	sourcepath=$1
+  rsync -ac --exclude "/uninstall" "$sourcepath/" "$installpath/"
 }
 
 transfer_path(){
-  transferpath=$1
-  transferfile=$transferpath/transfer
-  [ -f "$transferfile" ] && rm -f "transferpath/install"
-  [ -f "$transferfile" ] || transferfile=$transferpath/install
-  rm -f $transferpath/readme.*
-  rm -f $transferpath/README.*
-  rm -f $transferpath/*.txt
-  rm -f $transferpath/*.md
-  transfer_file "$transferfile" && transfer_default
+	[ -d "$1" ] || return 1
+  trpath=$1
+  transferfile=$trpath/transfer
+  [ -f "$transferfile" ] && rm -f "$trpath/install"
+  [ -f "$transferfile" ] || transferfile=$trpath/install
+  rm -f $trpath/readme.*
+  rm -f $trpath/README.*
+  rm -f $trpath/*.txt
+  rm -f $trpath/*.md
+  transfer_file "$transferfile" || transfer_default $1
 }
 
 pack_upath(){
@@ -30,6 +27,7 @@ pack_upath(){
 }
 
 pack_install(){
+	echo Installing $1 package...
   if [ -f "$1" ]; then
     transferpath=$temppath/pack
     rm -rf "$transferpath"
@@ -41,32 +39,48 @@ pack_install(){
   transfer_path "$transferpath"
   mkdir -p "$installpath/hmod"
   if [ ! -f "$transferpath/uninstall" ]; then
+		echo Creating uninstall for $1...
     cd "$transferpath"
-    find . -type l -print0 | xargs -0 -I{} echo rm -f \"\$installpath/{}\" >> "$transferpath/uninstall"
-    find . -type f -print0 | xargs -0 -I{} echo rm -f \"\$installpath/{}\" >> "$transferpath/uninstall"
-    find . -depth -type d -print0 | xargs -0 -I{} echo rmdir \"\$installpath/{}\" >> "$transferpath/uninstall"
-    cat "$transferpath/uninstall" | sed "s#rmdir \"\$installpath/\.\"#echo#" > "$transferpath/uninstall.1"
-    cat "$transferpath/uninstall.1" | sed "s#\"\$installpath/\.#\"\$installpath#" > "$transferpath/uninstall"
-    rm -f "$transferpath/uninstall.1"
+    find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+    find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+    find . -mindepth 1 -type d -exec echo rmdir --ignore-fail-on-non-empty \"\$installpath/{}\" + >> "$transferpath/uninstall"
   fi
   cd /
   unfile=$(pack_upath "$1")
-  rsync -ac "$transferpath/uninstall" "$unfile"
+  copy "$transferpath/uninstall" "$unfile"
+	echo Package $1 installed
 }
 
 pack_uninstall(){
+	cd $installpath
   if [ "$1" == "all" ]; then
     for i in $(find "$installpath/hmod/" -maxdepth 1 -type f -name "uninstall-*" | sort); do
+			echo Uninstalling $i package...
       unfile=$(pack_upath "$i")
       transfer_file "$unfile"
+			rm -f "$unfile"
+			echo Package $i uninstalled
     done
   else
+		echo Uninstalling $1 package...
     unfile=$(pack_upath "$1")
     transfer_file "$unfile"
+		rm -f "$unfile"
   fi
+	cd /
+}
+
+packs_uninstall(){
+	[ -d "$1" ] || return 1
+	# To uninstall package we need only file or directory with the same name
+  for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
+    pack_uninstall "$i"
+    rm -rf "$i"
+  done
 }
 
 packs_install(){
+	[ -d "$1" ] || return 1
   for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
     pack_install "$i"
     rm -rf "$i"

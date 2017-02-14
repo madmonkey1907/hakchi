@@ -10,16 +10,30 @@ umount_base(){
 }
 
 shutdown(){
-  echo shutting down...
-  umount -a
+  echo Shutting down...
+  umount_base
   poweroff -f
   while :;do :;done
 }
 
+copy(){
+	# we must create target directory if source is directory
+	[ -d "$1" ] && mkdir -p "$2"
+	echo Transfering "$1" to "$2"...
+  rsync -ac $1 "$2"
+}
+
 restore(){
-  rsync -ac "$mountpoint$1" "$rootfs$1"
+  copy "$mountpoint$1" "$rootfs$1"
 }
 
 overmount(){
-  mount -o bind "$rootfs$1" "$mountpoint$1"
+	if [ "$#" == "1" ]; then
+		echo Overmounting $1
+	  mount -o bind "$rootfs$1" "$mountpoint$1"
+	fi
+	if [ "$#" == "2" ]; then
+		echo Overmounting $1 on $2
+	  mount -o bind "$installpath/$1" "$mountpoint$2"
+	fi
 }
