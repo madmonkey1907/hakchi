@@ -1,88 +1,88 @@
 transfer_file(){
-  [ -f "$1" ] || return 1
-  source "$1"
-  return $?
+	[ -f "$1" ] || return 1
+	source "$1"
+	return $?
 }
 
 transfer_default(){
 	sourcepath=$1
-  rsync -ac --exclude "/uninstall" "$sourcepath/" "$installpath/"
+	rsync -ac --exclude "/uninstall" "$sourcepath/" "$installpath/"
 }
 
 transfer_path(){
 	[ -d "$1" ] || return 1
-  trpath=$1
-  transferfile=$trpath/transfer
-  [ -f "$transferfile" ] && rm -f "$trpath/install"
-  [ -f "$transferfile" ] || transferfile=$trpath/install
-  rm -f $trpath/readme.*
-  rm -f $trpath/README.*
-  rm -f $trpath/*.txt
-  rm -f $trpath/*.md
-  transfer_file "$transferfile" || transfer_default $1
+	trpath=$1
+	transferfile=$trpath/transfer
+	[ -f "$transferfile" ] && rm -f "$trpath/install"
+	[ -f "$transferfile" ] || transferfile=$trpath/install
+	rm -f $trpath/readme.*
+	rm -f $trpath/README.*
+	rm -f $trpath/*.txt
+	rm -f $trpath/*.md
+	transfer_file "$transferfile" || transfer_default $1
 }
 
 pack_upath(){
-  echo $installpath/hmod/uninstall-$(basename "$1" .hmod)
+	echo $installpath/hmod/uninstall-$(basename "$1" .hmod)
 }
 
 pack_install(){
 	echo Installing $1 package...
-  if [ -f "$1" ]; then
-    transferpath=$temppath/pack
-    rm -rf "$transferpath"
-    mkdir -p "$transferpath"
-    cd "$transferpath" && tar -xzf "$1"
-  else
-    transferpath=$1
-  fi
-  transfer_path "$transferpath"
-  mkdir -p "$installpath/hmod"
-  if [ ! -f "$transferpath/uninstall" ]; then
-		echo Creating uninstall for $1...
-    cd "$transferpath"
-    find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    find . -mindepth 1 -type d -exec echo rmdir --ignore-fail-on-non-empty \"\$installpath/{}\" + >> "$transferpath/uninstall"
-  fi
-  cd /
-  unfile=$(pack_upath "$1")
-  copy "$transferpath/uninstall" "$unfile"
+	if [ -f "$1" ]; then
+	transferpath=$temppath/pack
+	rm -rf "$transferpath"
+	mkdir -p "$transferpath"
+	cd "$transferpath" && tar -xzf "$1"
+	else
+	transferpath=$1
+	fi
+	transfer_path "$transferpath"
+	mkdir -p "$installpath/hmod"
+	if [ ! -f "$transferpath/uninstall" ]; then
+	echo Creating uninstall for $1...
+	cd "$transferpath"
+	find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+	find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
+	find . -mindepth 1 -type d -exec echo rmdir --ignore-fail-on-non-empty \"\$installpath/{}\" + >> "$transferpath/uninstall"
+	fi
+	cd /
+	unfile=$(pack_upath "$1")
+	copy "$transferpath/uninstall" "$unfile"
 	echo Package $1 installed
 }
 
 pack_uninstall(){
 	cd $installpath
-  if [ "$1" == "all" ]; then
-    for i in $(find "$installpath/hmod/" -maxdepth 1 -type f -name "uninstall-*" | sort); do
-			echo Uninstalling $i package...
-      unfile=$(pack_upath "$i")
-      transfer_file "$unfile"
+		if [ "$1" == "all" ]; then
+			for i in $(find "$installpath/hmod/" -maxdepth 1 -type f -name "uninstall-*" | sort); do
+				echo Uninstalling $i package...
+				unfile=$(pack_upath "$i")
+				transfer_file "$unfile"
+					rm -f "$unfile"
+					echo Package $i uninstalled
+			done
+		else
+			echo Uninstalling $1 package...
+			unfile=$(pack_upath "$1")
+			transfer_file "$unfile"
 			rm -f "$unfile"
-			echo Package $i uninstalled
-    done
-  else
-		echo Uninstalling $1 package...
-    unfile=$(pack_upath "$1")
-    transfer_file "$unfile"
-		rm -f "$unfile"
-  fi
+		fi
 	cd /
 }
 
 packs_uninstall(){
 	[ -d "$1" ] || return 1
 	# To uninstall package we need only file or directory with the same name
-  for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
-    pack_uninstall "$i"
-    rm -rf "$i"
-  done
+	for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
+	pack_uninstall "$i"
+	rm -rf "$i"
+	done
 }
 
 packs_install(){
 	[ -d "$1" ] || return 1
-  for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
-    pack_install "$i"
-    rm -rf "$i"
-  done
+	for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
+	pack_install "$i"
+	rm -rf "$i"
+	done
 }
