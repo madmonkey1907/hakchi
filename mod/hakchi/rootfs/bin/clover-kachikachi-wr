@@ -4,7 +4,9 @@
 # using "cfg_nes_extra_args" variable in p0000_config
 # or disable epilepsy protection using "cfg_disable_armet=y"
 
-source /etc/preinit.d/p0000_config
+source /etc/preinit
+script_init
+
 args="$@ $cfg_nes_extra_args"
 [ "$cfg_disable_armet" == "y" ] && args="$(echo $args | sed 's/--enable-armet//g')"
 exec /usr/bin/clover-kachikachi $args

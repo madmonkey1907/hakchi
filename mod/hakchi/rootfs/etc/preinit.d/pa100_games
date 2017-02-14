@@ -1,12 +1,1 @@
-overmount_games(){
-  local menu_code=000
-  [ -f "$installpath/menu" ] && menu_code=$(cat "$installpath/menu")
-  echo Menu code: $menu_code
-  if [ "$menu_code" == "000" ]; then
-    overmount "$gamepath"
-  else
-    overmount "$rootfs$gamepath/$menu_code" "$gamepath"
-  fi
-}
-
 [ "$cfg_boot_stock" == "y" ] || overmount_games

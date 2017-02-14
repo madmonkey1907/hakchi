@@ -1,7 +1,6 @@
-overmount_all(){
+overmount_base(){
   overmount "/bin"
   overmount "/etc"
-  overmount "/usr/bin"
 }
 
-[ "$cfg_boot_stock" == "y" ] || overmount_all
+[ "$cfg_boot_stock" == "y" ] || overmount_base

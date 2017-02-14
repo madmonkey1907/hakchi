@@ -7,7 +7,9 @@ backup_nandc
 mount_base
 backup
 
-[ -f "$preinitpath/p0000_config" ] && source "$preinitpath/p0000_config"
+source "$modpath/rootfs/etc/preinit"
+source_base "$modpath/rootfs/etc/preinit.d"
+source_config
 
 if [ -f "$preinit" ]; then
   echo $modname already installed
@@ -35,5 +37,5 @@ fi
 echo transferring data...
 transfer_path "$transferpath"
 
-source "$preinitpath/pffff_config"
+save_config
 [ "$cf_shutdown" != "y" ] || shutdown

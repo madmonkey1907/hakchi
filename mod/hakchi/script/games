@@ -4,7 +4,7 @@ transfer_original_games(){
     # Using temporary directory for original games
     tmp_games=/tmp/original_games
     mkdir -p "$tmp_games"    
-    copy "$mountpoint/usr/share/games/nes/kachikachi/CLV-*" "$tmp_games"
+    copy "$mountpoint$gamepath/CLV-*" "$tmp_games"
     # Patching games to use our wrapper
     find $tmp_games/* -name *.desktop -exec sed -i -e 's/clover-kachikachi/clover-kachikachi-wr/g' {} +
     # We need to decide game distination directory, so we can't just copy all games at once
@@ -37,7 +37,7 @@ transfer_original_games(){
 
 transfer_games(){
     [ -d "$1" ] || return 1
-    target_dir=$rootfs/usr/share/games/nes/kachikachi
+    target_dir=$rootfs$gamepath
     # Flag to remove all installed games
     if [ -f "$1/clear" ]; then
         echo Removing games...
@@ -46,8 +46,8 @@ transfer_games(){
     fi
     mkdir -p "$target_dir"
     # But we need fonts
-    restore "/usr/share/games/nes/kachikachi/title.fnt"
-    restore "/usr/share/games/nes/kachikachi/copyright.fnt"
+    restore "$gamepath/title.fnt"
+    restore "$gamepath/copyright.fnt"
     transfer_original_games "$1/original"
     echo Transfering new games...
     # This is simple

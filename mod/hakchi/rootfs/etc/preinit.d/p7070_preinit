@@ -1,8 +1,1 @@
-load_firmware(){
-  [ -d "$firmwarepath" ] || return 0
-  local firmware=$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)
-  [ -f "$firmware" ] || return 0
-  remount_root "$firmware" && cryptsetup close root-crypt
-}
-
 [ "cfg_boot_stock_firmware" == "y" ] || load_firmware
