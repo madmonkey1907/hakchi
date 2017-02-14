@@ -1,6 +1,6 @@
 mod_uninstall(){
   echo uninstalling $modname...
-  rm -rf "$rootfs"
+  rm -rf "$installpath"
   echo done.
   shutdown
 }
@@ -9,9 +9,15 @@ mod_repair(){
   restore "/etc/clover/"
   restore "/etc/issue"
   rm -f "$modpath/rootfs/etc/preinit.d/p0000_config"
-  rsync -ac "$modpath/rootfs/" "$rootfs/"
-  rsync -ac "/bin/" "$rootfs/bin/"
-  rsync -ac "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
+  chown -R root:root $modpath/
+  chmod 755 $modpath/rootfs/bin/*
+  copy "$modpath/rootfs/" "$rootfs/"
+  copy "/bin/" "$rootfs/bin/"
+  copy "/sbin/cryptsetup" "$rootfs/bin/cryptsetup"
+
+  # This file required by hakchi2 kernel...
+  echo hakchi_enabled=y > "$temppath/config"
+  copy "$temppath/config" "$installpath/"
 }
 
 mod_install(){

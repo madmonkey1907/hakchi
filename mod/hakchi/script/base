@@ -33,10 +33,23 @@ early_getty(){
   getty -ni 115200 ttyS0 -l /bin/sh
 }
 
+copy(){
+  # we must create target directory if source is directory
+  [ -d "$1" ] && mkdir -p "$2"
+  rsync -ac "$1" "$2"
+}
+
 restore(){
-  rsync -ac "$mountpoint$1" "$rootfs$1"
+  copy "$mountpoint$1" "$rootfs$1"
 }
 
 overmount(){
-  mount -o bind "$rootfs$1" "$mountpoint$1"
+  if [ "$#" == "1" ]; then
+    echo overmounting $1
+    mount -o bind "$rootfs$1" "$mountpoint$1"
+  fi
+  if [ "$#" == "2" ]; then
+    echo overmounting $1 on $2
+    mount -o bind "$1" "$mountpoint$2"
+  fi
 }
