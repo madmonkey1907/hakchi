@@ -17,11 +17,12 @@ transfer_default(){
   --exclude "/transfer" \
   --exclude "/uninstall" \
   --exclude "*.hmod" \
-  "$transferpath/" "$installpath/"
+  "$transferpath/" "$rootfs/"
 }
 
 transfer_path(){
   local transferpath=$1
+  chown -R 0:0 "$transferpath/"
   find "$transferpath/" -maxdepth 1 -type f -iname "readme.*" -delete
   find "$transferpath/" -maxdepth 1 -type f -iname "*.txt" -delete
   find "$transferpath/" -maxdepth 1 -type f -iname "*.md" -delete
@@ -50,9 +51,9 @@ pack_install(){
   if [ ! -f "$transferpath/uninstall" ]; then
     echo creating uninstall for $(basename "$1" .hmod)...
     cd "$transferpath"
-    find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    find . -depth -mindepth 1 -type d -exec echo rmdir \"\$installpath/{}\" + >> "$transferpath/uninstall"
+    find . -type l -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
+    find . -type f -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
+    find . -depth -mindepth 1 -type d -exec echo rmdir \"\$rootfs/{}\" + >> "$transferpath/uninstall"
     [ $(stat -c%s "$transferpath/uninstall") -gt 8 ] || rm -f "$transferpath/uninstall"
   fi
   cd /

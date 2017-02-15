@@ -1,3 +1,14 @@
+mount_base(){
+  mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var"
+  mkdir -p "$mountpoint/var/lib"
+  mount -o defaults,nosuid,nodev,noatime /dev/nandc "$mountpoint/var/lib"
+}
+
+umount_base(){
+  umount "$mountpoint/var/lib"
+  umount "$mountpoint/var"
+}
+
 remount_root(){
   local tmpmount=$modpath/var.tmp
   mkdir -p "$tmpmount"
@@ -52,6 +63,7 @@ mount_bind(){
 }
 
 overmount(){
+  l_boot_stock=n
   if [ "$#" == "1" ]; then
     echo overmounting $1
     mount_bind "$rootfs$1" "$mountpoint$1"
@@ -67,9 +79,11 @@ overmount_games(){
   [ -f "$installpath/menu" ] && menu_code=$(cat "$installpath/menu")
   [ -z "$menu_code" ] && menu_code=000
   echo menu code: $menu_code
-  if [ "$menu_code" == "000" ]; then
-    overmount "$gamepath"
-  else
-    overmount "$rootfs$gamepath/$menu_code" "$gamepath"
+  if [ "$menu_code" != "000" ]; then
+    if [ -d "$rootfs$gamepath/$menu_code" ]; then
+      overmount "$rootfs$gamepath/$menu_code" "$gamepath"
+      return $?
+    fi
   fi
+  overmount "$gamepath"
 }
