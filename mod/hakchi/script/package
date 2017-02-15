@@ -90,7 +90,7 @@ packs_install(){
   [ -d "$1" ] || return 1
   for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
     pack_install "$i"
-    rm -rf "$1"
+    rm -rf "$i"
   done
 }
 
