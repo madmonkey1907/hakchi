@@ -1,6 +1,5 @@
 modname=hakchi
 modpath=/$modname
-[ -z "$mountpoint" ] && mountpoint=/
 installpath=$mountpoint/var/lib/$modname
 firmwarepath=$installpath/firmware
 rootfs=$installpath/rootfs
