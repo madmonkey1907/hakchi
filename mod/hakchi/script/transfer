@@ -11,15 +11,15 @@ source "$modpath/rootfs/etc/preinit"
 source_base "$modpath/rootfs/etc/preinit.d"
 source_config
 
-# if we're running modified firmware
-source "$preinitpath/p7070_firmware"
-
 if [ -f "$preinit" ]; then
   echo $modname already installed
   mod_repair
 else
   mod_install
 fi
+
+# if we're running modified firmware
+source "$preinitpath/p7070_firmware"
 
 local transferpath=$modpath/transfer
 
