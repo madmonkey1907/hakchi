@@ -1,26 +1,29 @@
 #!/bin/sh
-installpath=/var/lib/hakchi
-rootfs=$installpath/rootfs
-gamesdir=$rootfs/usr/share/games/nes/kachikachi
+source /etc/preinit
+script_init
+
 state_file=$installpath/menu
-echo switching to menu $1
-echo $1>$state_file
+
+[ -z "$1" ] && exit 1
+prev_code=$(cat "$state_file")
+[ "$1" == "$prev_code" ] && exit 0
+
+echo Switching to menu $1
 if [ "$1" == "000" ]; then
-  targetdir=$gamesdir
+  targetpath=$gamepath
 else
-  targetdir=$gamesdir/$1
-fi
-echo new directory: $targetdir
-if [ ! -f $targetdir/title.fnt ]; then
-  ln -s $gamesdir/title.fnt $targetdir/title.fnt
-fi
-if [ ! -f $targetdir/copyright.fnt ]; then
-  ln -s $gamesdir/copyright.fnt $targetdir/copyright.fnt
+  targetpath=$gamepath/$1
 fi
 
-pkill -KILL clover-mcp
-pkill -KILL ReedPlayer-Clover
+[ -d "$targetpath" ] || exit 1
+echo $1 > "$state_file"
 
-umount -f /usr/share/games/nes/kachikachi
-mount -o bind $targetdir /usr/share/games/nes/kachikachi
-clover-mcp
+echo New directory: $targetpath
+if [ ! -f "$targetpath/title.fnt" ]; then
+  ln -s "$gamepath/title.fnt" "$targetpath/title.fnt"
+fi
+if [ ! -f "$targetpath/copyright.fnt" ]; then
+  ln -s "$gamepath/copyright.fnt" "$targetpath/copyright.fnt"
+fi
+
+overmount_games
