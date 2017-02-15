@@ -20,14 +20,8 @@ fi
 
 local transferpath=$modpath/transfer
 
-if [ -f "$transferpath/uninstall" ]; then
-  packs_uninstall $(cat "$transferpath/uninstall")
-  rm $transferpath/uninstall
-fi
-if [ -f "$transferpath/hmod/uninstall" ]; then
-  packs_uninstall $(cat "$transferpath/hmod/uninstall")
-  rm $transferpath/hmod/uninstall
-fi
+[ -f "$transferpath/uninstall" ] && packs_uninstall $(cat "$transferpath/uninstall")
+[ -f "$transferpath/hmod/uninstall" ] && packs_uninstall $(cat "$transferpath/hmod/uninstall")
 
 packs_install "$transferpath"
 if [ -d "$transferpath/hmod" ]; then
