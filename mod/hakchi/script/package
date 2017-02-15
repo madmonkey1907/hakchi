@@ -52,9 +52,7 @@ pack_install(){
     cd "$transferpath"
     find . -type l -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
     find . -type f -exec echo rm -f \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    find . -depth -type d -exec echo rmdir \"\$installpath/{}\" + >> "$transferpath/uninstall"
-    sed -i "s#rmdir \"\$installpath/\.\"#echo#" "$transferpath/uninstall"
-    sed -i "s#\"\$installpath/\.#\"\$installpath#" "$transferpath/uninstall"
+    find . -depth -mindepth 1 -type d -exec echo rmdir \"\$installpath/{}\" + >> "$transferpath/uninstall"
     [ $(stat -c%s "$transferpath/uninstall") -gt 8 ] || rm -f "$transferpath/uninstall"
   fi
   cd /

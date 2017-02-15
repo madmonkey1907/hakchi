@@ -35,6 +35,11 @@ copy(){
   rsync -ac "$1" "$2"
 }
 
+copy_mask(){
+  # this function is unsafe, avoid spaces in filenames!
+  rsync -ac $1 "$2"
+}
+
 restore(){
   copy "$mountpoint$1" "$rootfs$1"
 }
@@ -61,7 +66,7 @@ overmount_games(){
   local menu_code=000
   [ -f "$installpath/menu" ] && menu_code=$(cat "$installpath/menu")
   [ -z "$menu_code" ] && menu_code=000
-  echo Menu code: $menu_code
+  echo menu code: $menu_code
   if [ "$menu_code" == "000" ]; then
     overmount "$gamepath"
   else

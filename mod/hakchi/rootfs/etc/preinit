@@ -3,6 +3,7 @@ rand(){
 }
 
 source_parts(){
+  [ -z "$temppath" ] && local temppath=/tmp
   local script=$temppath/script_$(rand)
   rm -f "$script"
   for i in $(find $(dirname "$1") -maxdepth 1 -path "$1" | sort); do
@@ -27,6 +28,10 @@ source_base(){
     source_parts "$preinitpath/b????_*"
     return 0
   fi
+  if [ -d "$rootfs/etc/preinit.d" ]; then
+    source_parts "$rootfs/etc/preinit.d/b????_*"
+    return 0
+  fi
   if [ -d "/etc/preinit.d" ]; then
     source_parts "/etc/preinit.d/b????_*"
     return 0
@@ -48,6 +53,8 @@ script_init(){
 }
 
 preinit(){
+  mkdir -p /tmp
+  [ -z "$gamepath" ] && [ -d "/newroot" ] && /bin/busybox --install -s /bin/ && cp $rootfs/bin/rsync /bin
   source_base
   source_parts "$preinitpath/p????_*"
 }
