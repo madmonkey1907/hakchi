@@ -9,7 +9,7 @@ mod_repair(){
   restore "/etc/clover/"
   restore "/etc/issue"
   rm -f "$modpath/rootfs/etc/preinit.d/p0000_config"
-  chown -R root:root $modpath/
+  chown -R 0:0 $modpath/
   chmod 755 $modpath/rootfs/bin/*
   copy "$modpath/rootfs/" "$rootfs/"
   copy "/bin/" "$rootfs/bin/"

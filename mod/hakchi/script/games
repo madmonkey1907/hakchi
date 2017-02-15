@@ -1,16 +1,16 @@
 transfer_original_games(){
     [ -d "$1" ] || return 1
-    echo Transfering original games...
+    echo transfering original games...
     # Using temporary directory for original games
     tmp_games=/tmp/original_games
     mkdir -p "$tmp_games"    
-    copy "$mountpoint$gamepath/CLV-*" "$tmp_games"
+    copy_mask "$mountpoint$gamepath/CLV-*" "$tmp_games"
     # Patching games to use our wrapper
-    find $tmp_games/* -name *.desktop -exec sed -i -e 's/clover-kachikachi/clover-kachikachi-wr/g' {} +
+    find $tmp_games -name *.desktop -exec sed -i -e 's/\/usr\/bin\/clover-kachikachi/\/bin\/clover-kachikachi-wr/g' {} +
     # We need to decide game distination directory, so we can't just copy all games at once
     for dir in $tmp_games/*; do
         if [ -d $dir ]; then
-            code=`echo $dir | sed "s/.*\///"`
+            code=$(basename "$dir")
             # File "hidden" contains list of unwanted original games, so we need to check it
             if [ -f $1/hidden ] && grep -q $code $1/hidden; then
                 echo $code is hidden
@@ -20,17 +20,17 @@ transfer_original_games(){
                 if [ -f "$1/gpath-$code" ]; then
                     dist=`cat "$1/gpath-$code"`
                     mkdir -p "$tmp_games/$dist"
-                    echo Moving $code to $dist folder
+                    echo moving $code to $dist folder
                     mv "$tmp_games/$code" "$tmp_games/$dist"
                     rm "$1/gpath-$code"
                 else                    
-                    echo There is no path file for $code, moved to root
+                    echo there is no path file for $code, moved to root
                 fi
             fi
         fi
     done
     # Now we can write games to flash
-    copy "$tmp_games/*" "$target_dir"
+    copy_mask "$tmp_games/*" "$target_dir"
     rm -rf "$tmp_games"
     rm -rf "$1"
 }
@@ -40,8 +40,8 @@ transfer_games(){
     target_dir=$rootfs$gamepath
     # Flag to remove all installed games
     if [ -f "$1/clear" ]; then
-        echo Removing games...
-        rm -rf $target_dir/CLV-*
+        echo removing games and subfolders...
+        rm -rf $target_dir/CLV-* $target_dir/???
         rm "$1/clear"
     fi
     mkdir -p "$target_dir"
@@ -49,9 +49,9 @@ transfer_games(){
     restore "$gamepath/title.fnt"
     restore "$gamepath/copyright.fnt"
     transfer_original_games "$1/original"
-    echo Transfering new games...
-    # This is simple
-    copy "$1/*" "$target_dir"
-    # Need to reset menu state
+    echo transfering new games...
+    # this is simple
+    copy_mask "$1/*" "$target_dir"
+    # need to reset menu state
     rm -f $installpath/menu
 }
