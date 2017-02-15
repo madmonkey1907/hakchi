@@ -23,8 +23,8 @@ source "$preinitpath/p7070_firmware"
 
 local transferpath=$modpath/transfer
 
-[ -f "$transferpath/uninstall" ] && packs_uninstall $(cat "$transferpath/uninstall")
-[ -f "$transferpath/hmod/uninstall" ] && packs_uninstall $(cat "$transferpath/hmod/uninstall")
+[ -f "$transferpath/uninstall" ] && packs_uninstall $(cat "$transferpath/uninstall") && rm -f $transferpath/uninstall
+[ -f "$transferpath/hmod/uninstall" ] && packs_uninstall $(cat "$transferpath/hmod/uninstall") && rm -f $transferpath/hmod/uninstall
 
 packs_install "$transferpath"
 if [ -d "$transferpath/hmod" ]; then
