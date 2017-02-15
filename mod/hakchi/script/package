@@ -95,7 +95,6 @@ packs_install(){
 }
 
 packs_uninstall(){
-  [ -d "$1" ] || return 1
   for i in $@; do
     pack_uninstall "$i"
   done
