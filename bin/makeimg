@@ -9,8 +9,8 @@ fi
 infile=$(basename "$inpath").img
 img=./$infile
 
-rm -rf "$inpath/initramfs/hakchi/transfer"
-(cd "$inpath/../mod";cp -a * "../$inpath/initramfs/")
+rm -rf "$inpath/initramfs/hakchi"
+rsync -a "$inpath/../mod/" "$inpath/initramfs/"
 if [ "$2" == "notx" ]; then
   rm -rf "$inpath/initramfs/hakchi/transfer"
 fi

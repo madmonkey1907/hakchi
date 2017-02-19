@@ -5,6 +5,7 @@ mount_base(){
 }
 
 umount_base(){
+  sync
   umount "$mountpoint/var/lib"
   umount "$mountpoint/var"
 }
