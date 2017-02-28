@@ -10,7 +10,7 @@
 #endif
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
-#include <QURL>
+#include <QUrl>
 #endif
 
 static QFileInfo appFileInfo_init()
