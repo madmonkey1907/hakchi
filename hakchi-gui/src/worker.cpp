@@ -152,6 +152,9 @@ void Worker::doWork(int work)
     case flashKernel:
         do_flashKernel();
         break;
+    case flashUboot:
+        do_flashUboot();
+        break;
     case memboot:
         do_memboot();
         break;
@@ -413,15 +416,95 @@ void Worker::do_flashKernel()
         printf("kernel: verify ok\n");
     else
         printf("kernel: verify fuck\n");
-#if 0
-    char cmd[1024];
-    sprintf(cmd,"boota %x",transfer_base_m);
-    if(!fel->runUbootCmd(cmd,true))
+    printf("%s - OK\n",Q_FUNC_INFO);
+}
+
+bool spl_checksum(char*data,uint32_t fs,int fix)
+{
+    if(fs)
     {
-        printf("kernel: runcmd error\n");
+        uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+
+        if((fs<32)||((memcmp(data+4,"eGON.BT",7)!=0)&&(memcmp(data+4,"uboot",6)!=0)))
+        {
+            printf("header is not found\n");
+            return false;
+        }
+
+        uint32_t l=le32toh(data32[(memcmp(data+4,"uboot",6)==0)?5:4]);
+        if((l>fs)||((l%4)!=0))
+        {
+            printf("bad length in header\n");
+            return false;
+        }
+        l/=4;
+
+        uint32_t c=0x5F0A6C39-le32toh(data32[3]);
+        for(uint32_t i=0;i<l;++i)
+            c+=le32toh(data32[i]);
+
+        if(c!=le32toh(data32[3]))
+        {
+            if(fix!=0)
+            {
+                data32[3]=htole32(c);
+                printf("checksum updated\n");
+                return true;
+            }
+            printf("checksum check failed\n");
+            return false;
+        }
+
+        return true;
+    }
+    return false;
+}
+
+void Worker::do_flashUboot()
+{
+    if((!init())||(!fel->haveUboot()))
+    {
         return;
     }
-#endif
+    QByteArray u=loadFile("data/uboot.bin");
+    size_t usize=u.size();
+    if(usize==0)
+    {
+        printf("uboot.bin not found\n");
+        return;
+    }
+    if(usize>uboot_maxsize_f)
+    {
+        printf("uboot: invalid size in header\n");
+        return;
+    }
+    if(!spl_checksum(u.data(),usize,1))
+        return;
+    usize=(usize+sector_size-1)/sector_size;
+    usize=usize*sector_size;
+    if(((size_t)u.size())!=usize)
+    {
+        const size_t oldSize=u.size();
+        u.resize(usize);
+        memset(u.data()+oldSize,0xff,usize-oldSize);
+    }
+    calcProgress(-u.size()*2);
+    if(fel->writeFlash(uboot_base_f,usize,u.data())!=usize)
+    {
+        printf("uboot: write error\n");
+        return;
+    }
+    printf("uboot: write ok\n");
+    QByteArray baver(usize,Qt::Uninitialized);
+    if(fel->readFlash(uboot_base_f,usize,baver.data())!=usize)
+    {
+        printf("uboot: read error\n");
+        return;
+    }
+    if(memcmp(u.data(),baver.data(),usize)==0)
+        printf("uboot: verify ok\n");
+    else
+        printf("uboot: verify fuck\n");
     printf("%s - OK\n",Q_FUNC_INFO);
 }
 

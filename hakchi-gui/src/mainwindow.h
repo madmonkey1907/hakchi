@@ -28,6 +28,7 @@ private slots:
     void on_actionUnpack_kernel_img_triggered();
     void on_actionRebuild_kernel_img_triggered();
     void on_actionFlash_kernel_triggered();
+    void on_actionFlash_uboot_triggered();
     void on_actionMemboot_triggered();
     void on_actionShutdown_triggered();
     void on_actionDump_nand_triggered();

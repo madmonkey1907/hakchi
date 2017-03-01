@@ -17,6 +17,7 @@ public:
         unpackKernel,
         packKernel,
         flashKernel,
+        flashUboot,
         memboot,
         shutdown
     };
@@ -41,6 +42,7 @@ private:
     void do_unpackKernel();
     void do_packKernel();
     void do_flashKernel();
+    void do_flashUboot();
     void do_memboot();
     void do_shutdown();
 

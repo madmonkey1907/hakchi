@@ -125,9 +125,16 @@ void MainWindow::on_actionRebuild_kernel_img_triggered()
 
 void MainWindow::on_actionFlash_kernel_triggered()
 {
-    if(QMessageBox::warning(this,"","sure?",QMessageBox::Yes|QMessageBox::Abort,QMessageBox::Abort)!=QMessageBox::Yes)
+    if(QMessageBox::warning(this,"kernel","sure?",QMessageBox::Yes|QMessageBox::Abort,QMessageBox::Abort)!=QMessageBox::Yes)
         return;
     emit doWork(Worker::flashKernel);
+}
+
+void MainWindow::on_actionFlash_uboot_triggered()
+{
+    if(QMessageBox::warning(this,"uboot","sure?",QMessageBox::Yes|QMessageBox::Abort,QMessageBox::Abort)!=QMessageBox::Yes)
+        return;
+    emit doWork(Worker::flashUboot);
 }
 
 void MainWindow::on_actionMemboot_triggered()

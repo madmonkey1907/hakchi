@@ -25,6 +25,7 @@ struct uboot_t
 #define uboot_base_m (dram_base+0x7000000u)
 #define uboot_base_f 0x100000u
 #define sector_size 0x20000u
+#define uboot_maxsize_f (sector_size*0x10)
 #define kernel_base_f (sector_size*0x30)
 #define kernel_maxsize_f (sector_size*0x20)
 #define transfer_base_m (dram_base+0x7400000u)

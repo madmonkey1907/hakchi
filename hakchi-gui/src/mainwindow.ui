@@ -220,6 +220,7 @@
    <addaction name="actionUnpack_kernel_img"/>
    <addaction name="actionRebuild_kernel_img"/>
    <addaction name="actionFlash_kernel"/>
+   <addaction name="actionFlash_uboot"/>
    <addaction name="actionMemboot"/>
    <addaction name="actionShutdown"/>
   </widget>
@@ -262,6 +263,11 @@
   <action name="actionDump_nand">
    <property name="text">
     <string>dump nand</string>
+   </property>
+  </action>
+  <action name="actionFlash_uboot">
+   <property name="text">
+    <string>flash uboot</string>
    </property>
   </action>
  </widget>
