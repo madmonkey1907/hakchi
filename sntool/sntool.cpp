@@ -121,16 +121,16 @@ int checksum(const char*in,int fix)
         fs=loadFile(in,data);
         uint32_t*data32=reinterpret_cast<uint32_t*>(data);
 
-        if((fs<32)||(memcmp(data+4,"eGON.BT",7)!=0))
+        if((fs<32)||((memcmp(data+4,"eGON.BT",7)!=0)&&(memcmp(data+4,"uboot",6)!=0)))
         {
-            printf("eGON header is not found\n");
+            printf("header is not found\n");
             return 1;
         }
 
-        uint32_t l=le32toh(data32[4]);
+        uint32_t l=le32toh(data32[(memcmp(data+4,"uboot",6)==0)?5:4]);
         if((l>fs)||((l%4)!=0))
         {
-            printf("bad length in the eGON header\n");
+            printf("bad length in header\n");
             return 1;
         }
         l/=4;
@@ -176,6 +176,7 @@ int split(const char*in)
         fs=offs;
         while(data[fs-1]==0xff)
             --fs;
+        data32[3]=0;
         data32[5]=0;
         data32[6]=0;
         saveFile(in,data,fs);
@@ -205,6 +206,7 @@ int join(const char*in0,const char*in1)
             data[fs0++]=0xff;
         data32[5]=htole32(fs0);
         saveFile(in0,data,fs0);
+        checksum(in0,1);
         return 0;
     }
     return 1;
