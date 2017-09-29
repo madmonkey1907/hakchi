@@ -48,6 +48,8 @@ CWinCon::CWinCon(QObject*parent):QObject(parent)
     default:
         codec=QTextCodec::codecForName("IBM437");
     }
+    if(codec==0)
+        codec=QTextCodec::codecForLocale();
 #else
     codec=QTextCodec::codecForLocale();
 #endif
@@ -76,7 +78,10 @@ void CWinCon::readOutput()
         char buffer[0x1000];
         if(fgets(buffer,sizeof(buffer),con))
         {
-            str=codec->toUnicode(buffer);
+            if(codec)
+                str=codec->toUnicode(buffer);
+            else
+                str=QString::fromLocal8Bit(buffer);
             if(str.length())
             {
                 readOutput();
