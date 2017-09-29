@@ -143,6 +143,9 @@ void Worker::doWork(int work)
     case dumpNandFull:
         do_dumpNandFull();
         break;
+    case writeNandFull:
+        do_writeNandFull();
+        break;
     case unpackKernel:
         do_unpackKernel();
         break;
@@ -353,6 +356,68 @@ void Worker::do_dumpNandFull()
     }
     md5final(&context,md5);
     printf("%s\n",md5print(md5,md5str));
+    printf("%s - OK\n",Q_FUNC_INFO);
+}
+
+void Worker::do_writeNandFull()
+{
+    if((!init())||(!fel->haveUboot()))
+    {
+        return;
+    }
+    const size_t block=0x2000000;
+    const size_t count=0x10;
+    calcProgress(0-(block*count));
+    const QString nandFile("dump/nand.bin");
+    QDir(".").mkdir("dump");
+    size_t fs=loadFile(nandFile.toLocal8Bit(),0);
+    size_t offset=0;
+    md5context context;
+    md5init(&context);
+    QByteArray buf(block,Qt::Uninitialized);
+    if((fs>0)&&((fs%block)==0)&&(fs<=(block*count)))
+    {
+        FILE*hf=fopen(nandFile.toLocal8Bit(),"rb");
+        if(hf)
+        {
+            while(fread(buf.data(),1,block,hf)==block)
+            {
+                if(fel->writeFlash(offset,block,buf.data())!=block)
+                {
+                    printf("nand: write error\n");
+                    return;
+                }
+                md5update(&context,buf.data(),block);
+//                calcProgress(block);
+                offset+=block;
+            }
+            fclose(hf);
+        }
+//        printf("%zuM done, continuing\n",fs/0x100000);
+    }
+    else
+    {
+//        QDir(".").remove(nandFile);
+    }
+    /*
+    uint8_t md5[16];
+    char md5str[40];
+    while(offset<(block*count))
+    {
+        if(fel->readFlash(offset,block,buf.data())!=block)
+        {
+            printf("nand: read error\n");
+            return;
+        }
+        appendFile(nandFile.toLocal8Bit(),buf.data(),block);
+        offset+=block;
+        md5update(&context,buf.data(),block);
+        md5calc(buf.data(),block,md5);
+        printf("%s\n",md5print(md5,md5str));
+    }
+    md5final(&context,md5);
+    printf("%s\n",md5print(md5,md5str));
+    */
     printf("%s - OK\n",Q_FUNC_INFO);
 }
 

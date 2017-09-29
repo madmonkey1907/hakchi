@@ -151,3 +151,9 @@ void MainWindow::on_actionDump_nand_triggered()
 {
     emit doWork(Worker::dumpNandFull);
 }
+
+void MainWindow::on_actionWrite_nand_triggered()
+{
+// do not use
+//    emit doWork(Worker::writeNandFull);
+}

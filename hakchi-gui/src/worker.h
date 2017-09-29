@@ -14,6 +14,7 @@ public:
         dumpUboot,
         dumpKernel,
         dumpNandFull,
+        writeNandFull,
         unpackKernel,
         packKernel,
         flashKernel,
@@ -39,6 +40,7 @@ private:
     void do_dumpUboot();
     void do_dumpKernel();
     void do_dumpNandFull();
+    void do_writeNandFull();
     void do_unpackKernel();
     void do_packKernel();
     void do_flashKernel();
