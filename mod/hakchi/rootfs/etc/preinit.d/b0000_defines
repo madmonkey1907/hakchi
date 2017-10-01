@@ -1,4 +1,4 @@
-set_gamepath(){
+setGamepath(){
   local feck="$mountpoint/var/lib/clover/profiles/0/home-menu/save/system-save.json"
   if [ -f "$mountpoint/etc/clover/version/canoe" ]; then
 #    echo "SNES gamepath"
@@ -19,9 +19,9 @@ modpath="/$modname"
 installpath="$mountpoint/var/lib/$modname"
 firmwarepath="$installpath/firmware"
 rootfs="$installpath/rootfs"
+squashfs="$installpath/squashfs"
 preinit="$rootfs/etc/preinit"
 preinitpath="$preinit.d"
 gamepath=""
-set_gamepath
+setGamepath
 temppath="/tmp"
-

@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-img=$1
+img="$1"
 if [ -z "$img" ]; then
-  img=./dump/kernel.img
+  img="./dump/kernel.img"
 fi
 
-infile=$(basename "$img")
-inpath=./$(basename "$infile" .img)
+infile="$(basename "$img")"
+inpath="./$(basename "$infile" .img)"
 
 rm -rf "$inpath"
 mkdir "$inpath"
