@@ -3,7 +3,7 @@ rand(){
 }
 
 source_parts(){
-  [ -z "$temppath" ] && local temppath="/tmp"
+  [ -z "$temppath" ] && temppath="/tmp"
   mkdir -p "$temppath"
   local script="$temppath/script_$(rand)"
   rm -f "$script"

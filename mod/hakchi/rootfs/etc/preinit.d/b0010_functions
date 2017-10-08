@@ -84,8 +84,7 @@ load_firmware(){
   [ -z "$(mount | grep -F loop0)" ] || return 1
 
   local firmware="$mountpoint$cfg_firmware"
-  if checkFirmware "$firmware"; then
-  else
+  if ! checkFirmware "$firmware"; then
     [ -d "$firmwarepath" ] || return 0
     firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)"
   fi
@@ -213,4 +212,9 @@ uistart(){
 
 gameover(){
   poweroff
+}
+
+printSoftwareInfo(){
+  echo "software=$sftype"
+  echo "region=$sfregion"
 }

@@ -11,6 +11,8 @@ local rootfs=""
 local squashfs=""
 local preinit=""
 local preinitpath=""
+local sftype=""
+local sfregion=""
 local gamepath=""
 local temppath="/tmp"
 
