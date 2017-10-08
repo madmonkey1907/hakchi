@@ -5,7 +5,7 @@ backup_one(){
 }
 
 backup_nandb(){
-  [ -f /dev/mapper/root-crypt ] || return 1
+  [ -b /dev/mapper/root-crypt ] || return 1
   mkdir -p "$backuppath" || return 1
   cd "$mountpoint/etc/clover" || return 1
   local nandb_filename="$(cat boardtype)-$(cat VERSION)-$(cat REGION).hsqs"

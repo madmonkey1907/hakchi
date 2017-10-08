@@ -2,15 +2,21 @@
 source /etc/preinit
 script_init
 
+echo "current firmware: $(currentFirmware)"
+printSoftwareInfo
+
 firmware="$1"
+if [ "$firmware" != "_nand_" ]; then
+  firmware="$(readlink -f "$1")"
+  checkFirmware "$firmware" || exit 1
+fi
 
-checkFirmware "$firmware" || exit 1
 [ "$cfg_firmware" == "$firmware" ] && exit 0
-
 cfg_firmware="$firmware"
 save_config
 
 [ "$(currentFirmware)" == "$firmware" ] && exit 0
 
+echo "changing firmware to: $firmware"
 reboot
 exit 0

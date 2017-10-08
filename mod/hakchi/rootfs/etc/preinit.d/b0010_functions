@@ -77,7 +77,16 @@ checkFirmware(){
 }
 
 currentFirmware(){
-  echo "$(losetup | awk '{print $3'})"
+  local firmware="$(losetup | awk '{print $3'})"
+  if ! [ -z "$firmware" ]; then
+    echo "$firmware"
+    return 0
+  fi
+  if [ -b /dev/mapper/root-crypt ]; then
+    echo "_nand_"
+    return 0
+  fi
+  return 1
 }
 
 load_firmware(){
@@ -95,7 +104,6 @@ load_firmware(){
   remount_root "$firmware"
   cryptsetup close root-crypt
   mountSquash
-  mod_repair_etc
   if [ ! -d "$mountpoint/lib/modules/$(uname -r)" ]; then
     if [ -d "$rootfs/lib/modules/$(uname -r)" ]; then
       overmount "/lib/modules"
@@ -103,7 +111,6 @@ load_firmware(){
       echo "no modules for loaded kernel $(uname -r)"
     fi
   fi
-  setGamepath
 }
 
 shutdown(){
