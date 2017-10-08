@@ -70,12 +70,27 @@ remount_root(){
   mount --move "$tmpmount" "$mountpoint/var"
 }
 
+checkFirmware(){
+  [ -f "$1" ] || return 1
+  [ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$1")" == "1936814952" ] || return 1
+  return 0
+}
+
+currentFirmware(){
+  echo "$(losetup | awk '{print $3'})"
+}
+
 load_firmware(){
   [ -z "$(mount | grep -F loop0)" ] || return 1
 
-  [ -d "$firmwarepath" ] || return 0
-  local firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)"
-  [ -f "$firmware" ] || return 0
+  local firmware="$mountpoint$cfg_firmware"
+  if checkFirmware "$firmware"; then
+  else
+    [ -d "$firmwarepath" ] || return 0
+    firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)"
+  fi
+  checkFirmware "$firmware" || return 0
+
   mod_repair_modules
   umountSquash
   remount_root "$firmware"
