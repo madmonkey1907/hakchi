@@ -5,14 +5,18 @@ backup_one(){
 }
 
 backup_nandb(){
-  mkdir -p "$backuppath"
-  local nandb_filename="$(cat $mountpoint/etc/clover/boardtype)-$(cat $mountpoint/etc/clover/VERSION).hsqs"
-  if [ ! -f "$backuppath/$nandb_filename" ]; then
+  [ -f /dev/mapper/root-crypt ] || return 1
+  mkdir -p "$backuppath" || return 1
+  cd "$mountpoint/etc/clover" || return 1
+  local nandb_filename="$(cat boardtype)-$(cat VERSION)-$(cat REGION).hsqs"
+  nandb_filename="$(echo "$nandb_filename" | tr '[:upper:]' '[:lower:]')"
+  cd "$backuppath" || return 1
+  if [ ! -f "$nandb_filename" ]; then
     echo "backup $nandb_filename"
     dd if=/dev/mapper/root-crypt bs=4k \
     count=$((($(hexdump -e '1/4 "%u"' -s $((0x28)) -n 4 /dev/mapper/root-crypt)+0xfff)/0x1000)) \
-    > "$backuppath/$nandb_filename"
-    md5sum "$backuppath/$nandb_filename" > "$backuppath/$nandb_filename.md5"
+    > "$nandb_filename" && \
+    md5sum "$nandb_filename" > "$nandb_filename.md5"
   fi
 }
 
@@ -33,8 +37,24 @@ backup(){
   fi
   [ "$cf_backup" == "y" ] || return 0
   backup_nandb
+  cd /
   [ "$cf_backup_dummy" == "y" ] || return 0
   backup_one nanda
   backup_one nandd
   backup_one nande
+}
+
+dumpFirmware(){
+  if [ -z "$1" ]; then
+    echo "specify path"
+    return 1
+  fi
+  local backuppath="$1"
+  if backup_nandb; then
+    cd /
+    return 0
+  fi
+  echo "whoopsie"
+  cd /
+  return 1
 }

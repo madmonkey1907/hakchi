@@ -1,11 +1,30 @@
+squashDevice(){
+  echo "$(mount | grep -F squashfs | head -n1 | awk '{print $1;}')"
+}
+
+umountSquash(){
+  mountpoint -q "$squashfs" && umount "$squashfs"
+}
+
+mountSquash(){
+  [ -d "$(dirname "$squashfs")" ] || return 1
+  umountSquash
+  mkdir -p "$squashfs"
+  local sdev="$(squashDevice)"
+  [ -z "$sdev" ] && return 1
+  mount -o ro,noatime "$sdev" "$squashfs"
+}
+
 mount_base(){
   mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var"
   mkdir -p "$mountpoint/var/lib"
   mount -o defaults,nosuid,nodev,noatime /dev/nandc "$mountpoint/var/lib"
+  mountSquash
 }
 
 umount_base(){
   sync
+  umountSquash
   umount "$mountpoint/var/lib"
   umount "$mountpoint/var"
 }
@@ -39,8 +58,6 @@ mod_repair_modules(){
 }
 
 remount_root(){
-  [ -z "$(mount | grep -F loop)" ] || return 1
-
   local tmpmount="/var"
   mkdir -p "$tmpmount"
   mount --move "$mountpoint/var" "$tmpmount"
@@ -54,12 +71,16 @@ remount_root(){
 }
 
 load_firmware(){
+  [ -z "$(mount | grep -F loop0)" ] || return 1
+
   [ -d "$firmwarepath" ] || return 0
   local firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)"
   [ -f "$firmware" ] || return 0
   mod_repair_modules
-  remount_root "$firmware" || return 0
+  umountSquash
+  remount_root "$firmware"
   cryptsetup close root-crypt
+  mountSquash
   mod_repair_etc
   if [ ! -d "$mountpoint/lib/modules/$(uname -r)" ]; then
     if [ -d "$rootfs/lib/modules/$(uname -r)" ]; then
@@ -110,7 +131,11 @@ copy_mask(){
 }
 
 restore(){
-  copy "$mountpoint$1" "$rootfs$1"
+  if mountpoint -q "$squashfs" && [ -e "$squashfs$1" ]; then
+    copy "$squashfs$1" "$rootfs$1"
+  else
+    copy "$mountpoint$1" "$rootfs$1"
+  fi
 }
 
 mount_bind(){
