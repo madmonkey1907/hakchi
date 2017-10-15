@@ -22,7 +22,7 @@ If you don't already have homebrew installed on your Mac:
 The actual build dependencies:
 
 ```
-brew install libusb qt wget upx lzop wget
+brew install libusb qt wget upx lzop
 brew link qt --force
 ```
 
