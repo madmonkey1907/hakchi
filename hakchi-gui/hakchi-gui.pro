@@ -18,6 +18,7 @@ macx {
     QMAKE_LFLAGS_PLUGIN -= -dynamiclib
     QMAKE_LFLAGS_PLUGIN += -bundle
     MAKE_EXTENSION_SHLIB = bundle
+    LIBS += -framework CoreFoundation
 }
 
 SOURCES += $${PWD}/../3rdparty/sunxi-tools/fel_lib.c
