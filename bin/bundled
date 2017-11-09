@@ -1,0 +1,6 @@
+#!/bin/sh
+
+EXE="$(dirname "$0")/$1.exe"
+[ -f "$EXE" ] || EXE="$1"
+shift
+exec "$EXE" ${1+"$@"}

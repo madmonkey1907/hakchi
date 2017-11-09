@@ -32,4 +32,4 @@ fi
 uistop
 overmount_games
 
-touch "/var/startmpc.flag"
+touch "/var/startmcp.flag"

@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/bash -e
 
-input=$1
+input="$1"
 [ -d "$input" ] || exit 1
 
-ext=.hmod
-name=$(basename "$input" $ext)
-output=$(pwd)/$name$ext.tgz
+ext=".hmod"
+name="$(basename "$input" "$ext")"
+output="$(pwd)/$name$ext.tgz"
 
 rm -f "$output"
 (cd "$input" && tar -cz --owner=root --group=root --numeric-owner -f "$output" * && echo ok)

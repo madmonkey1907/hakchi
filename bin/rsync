@@ -1,0 +1,8 @@
+#!/bin/sh
+
+[ "$1" = "-a" ] || exit 1
+[ "$(uname -o)" = "MS/Windows" ] || exit 1
+win32path(){
+  echo "$(readlink -f "$1")" | sed 's#/#\\#g'
+}
+xcopy "$(win32path "$2")" "$(win32path "$3")" /h /y /c /r /s /q

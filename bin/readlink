@@ -1,0 +1,6 @@
+#!/bin/sh
+
+[ "$1" = "-f" ] || exit 1
+[ -d "$2" ] && cd "$2" && pwd && exit 0
+cd "$(dirname "$2")" && echo "$(pwd)/$(basename "$2")" && exit 0
+echo "$(pwd)/$2";exit 1

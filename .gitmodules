@@ -7,3 +7,6 @@
 [submodule "3rdparty/macdylibbundler"]
 	path = 3rdparty/macdylibbundler
 	url = https://github.com/auriamg/macdylibbundler
+[submodule "3rdparty/mkbootfs"]
+	path = 3rdparty/mkbootfs
+	url = https://github.com/osm0sis/mkbootfs/

@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+input="$1"
+[ -f "$input" ] || exit 1
+signature="$(hexdump -e '1/4 "%x"' -s 0 -n 4 "$input")"
+[ "$signature" = "4f5a4c89" ] && exec lzop -cd "$input"
+[ "$signature" = "587a37fd" ] && exec bundled xz -cd "$input"
+echo "unknown signature: $signature"
+exit 1

@@ -1,0 +1,5 @@
+if [ -f "$cfg_boot_logo" ]; then
+  showImage "$cfg_boot_logo"
+else
+  showImage "$rootfs/etc/$modname.fb"
+fi

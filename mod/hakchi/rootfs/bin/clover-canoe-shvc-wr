@@ -20,7 +20,9 @@ while [ $# -gt 0 ] ; do
       mkdir -p "$tmppath"
       cd "$tmppath"
       tiny7zx x "$filename"
-      filename="$tmppath/$(ls)"
+      filename="$(ls|head -n1)"
+      mv "$filename" "rom.${filename##*.}"
+      filename="$tmppath/rom.${filename##*.}"
     fi
     options="-rom $filename"
     shift
@@ -31,4 +33,6 @@ while [ $# -gt 0 ] ; do
 done
 
 args="$options $cfg_snes_extra_args"
+
+exec /bin/clover-canoe-shvc $args || \
 exec /usr/bin/clover-canoe-shvc $args

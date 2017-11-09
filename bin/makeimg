@@ -1,5 +1,4 @@
-#!/bin/bash
-set -e
+#!/bin/sh -e
 
 inpath="$1"
 if [ -z "$inpath" ]; then
@@ -11,21 +10,30 @@ img="./$infile"
 
 rm -rf "$inpath/initramfs/hakchi"
 rsync -a "$inpath/../mod/" "$inpath/initramfs/"
-if [ "$2" == "notx" ]; then
+if [ "$2" = "notx" ]; then
   rm -rf "$inpath/initramfs/hakchi/transfer"
+  rm -f "$inpath/initramfs/bin/rsync"
 fi
-upx -qq --best "$inpath/initramfs/sbin/cryptsetup" || true
-(cd "$inpath/initramfs";find . -print0 | sort -z | cpio -0o -H newc -R root:root --quiet > "../initramfs.cpio")
-lzop --best -f -o "$inpath/$infile-ramdisk.gz" "$inpath/initramfs.cpio"
+
+#(cd "$inpath/initramfs";find . -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
+mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"
+
+kernelzImage="$inpath/../data/zImage"
+compress="xz --check=crc32 --lzma2=dict=1MiB"
+if ! [ -f "$kernelzImage" ]; then
+  kernelzImage="$inpath/$infile-zImage"
+  compress="lzop --best"
+fi
+bundled $compress -c "$inpath/initramfs.cpio" > "$inpath/$infile-ramdisk.gz"
 
 mkbootimg \
---kernel "$inpath/$infile-zImage" \
+--kernel "$kernelzImage" \
 --ramdisk "$inpath/$infile-ramdisk.gz" \
---cmdline "$(cat $inpath/$infile-cmdline)" \
---board "$(cat $inpath/$infile-board)" \
---base "$(cat $inpath/$infile-base)" \
---pagesize "$(cat $inpath/$infile-pagesize)" \
---kernel_offset "$(cat $inpath/$infile-kerneloff)" \
---ramdisk_offset "$(cat $inpath/$infile-ramdiskoff)" \
---tags_offset "$(cat $inpath/$infile-tagsoff)" \
+--cmdline "$(cat "$inpath/$infile-cmdline")" \
+--board "$(cat "$inpath/$infile-board")" \
+--base "$(cat "$inpath/$infile-base")" \
+--pagesize "$(cat "$inpath/$infile-pagesize")" \
+--kernel_offset "$(cat "$inpath/$infile-kerneloff")" \
+--ramdisk_offset "$(cat "$inpath/$infile-ramdiskoff")" \
+--tags_offset "$(cat "$inpath/$infile-tagsoff")" \
 -o "$img"

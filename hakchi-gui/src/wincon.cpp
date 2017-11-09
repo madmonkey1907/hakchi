@@ -82,6 +82,7 @@ void CWinCon::readOutput()
                 str=codec->toUnicode(buffer);
             else
                 str=QString::fromLocal8Bit(buffer);
+            str=str.replace("\r","");
             if(str.length())
             {
                 readOutput();

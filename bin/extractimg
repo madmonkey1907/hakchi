@@ -1,5 +1,4 @@
-#!/bin/bash
-set -e
+#!/bin/sh -e
 
 img="$1"
 if [ -z "$img" ]; then
@@ -10,8 +9,8 @@ infile="$(basename "$img")"
 inpath="./$(basename "$infile" .img)"
 
 rm -rf "$inpath"
-mkdir "$inpath"
+mkdir -p "$inpath"
 unpackbootimg -i "$img" -o "$inpath"
-lzop -d "$inpath/$infile-ramdisk.gz" -o "$inpath/initramfs.cpio"
-mkdir "$inpath/initramfs"
-(cd "$inpath/initramfs";cpio -imd --no-preserve-owner --quiet -I "../initramfs.cpio")
+unpack "$inpath/$infile-ramdisk.gz" > "$inpath/initramfs.cpio"
+mkdir -p "$inpath/initramfs"
+(cd "$inpath/initramfs";bundled cpio -imd --no-preserve-owner --quiet -I "../initramfs.cpio")
