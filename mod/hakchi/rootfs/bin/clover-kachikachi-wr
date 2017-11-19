@@ -33,5 +33,5 @@ shift
 args="$filename $@ $cfg_nes_extra_args"
 [ "$cfg_disable_armet" == "y" ] && args="$(echo $args | sed 's/--enable-armet//g')"
 
-exec /bin/clover-kachikachi $args || \
-exec /usr/bin/clover-kachikachi $args
+[ -f "/bin/clover-kachikachi" ] && exec /bin/clover-kachikachi $args
+[ -f "/usr/bin/clover-kachikachi" ] && exec /usr/bin/clover-kachikachi $args

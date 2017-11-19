@@ -50,6 +50,7 @@ save_config(){
 script_init(){
   source_base
   source_config
+  softwareCheck
 }
 
 preinit(){
