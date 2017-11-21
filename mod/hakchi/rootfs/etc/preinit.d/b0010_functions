@@ -231,28 +231,65 @@ softwareCheck(){
     [ -d "$feck" ] && rm -rf "$feck.snes" && mv "$feck" "$feck.snes"
     [ -f "$feck.nes" ] && mv -f "$feck.nes" "$feck"
   fi
-
-  linkGames "$gamepath"
+  
   rm -f "$mountpoint/var/saves"
   ln -s "/var/lib/clover/profiles/0" "$mountpoint/var/saves"
+}
+
+repair_fonts(){
+  if [ "$sftype" == "nes" ]; then
+    mkdir -p "$1" || return 1
+    [ ! -f "$1/title.fnt" ] && (cp $rootfs$gamepath/title.fnt "$1" || cp $squashfs$gamepath/title.fnt "$1")
+    [ ! -f "$1/copyright.fnt" ] && (cp $rootfs$gamepath/copyright.fnt "$1" || cp $squashfs$gamepath/copyright.fnt "$1")
+  fi
+}
+
+repair_games(){
+  [ -w "$1" ] || return 0
+  local usesymlink=''
+  ln -s / "$1/symlinktest" && rm "$1/symlinktest" && usesymlink='y'
+  
+  ls -1 "$squashfs$gamepath" | grep CLV- | while read code
+  do
+    local gamedir="$1/$code"
+    local squashgamedir="$squashfs$gamepath/$code"
+    
+    [ -d "$gamedir" ] || continue
+    
+    if [ ! -f "$gamedir/$code.desktop" ]; then
+      cp "$squashgamedir/$code.desktop" "$gamedir/"
+      [ "$sftype" == "nes" ] && \
+        sed -i -e 's#/usr/bin/clover-kachikachi#/bin/clover-kachikachi-wr#g' "$gamedir/$code.desktop"
+      [ "$sftype" == "snes" ] && \
+        sed -i -e 's#/usr/bin/clover-canoe-shvc#/bin/clover-canoe-shvc-wr#g' "$gamedir/$code.desktop"
+    fi
+    
+    [ -d "$gamedir/autoplay/" ] && ([ "$(ls -A "$gamedir/autoplay/")" ] || rm -r "$gamedir/autoplay/")
+    [ -d "$gamedir/pixelart/" ] && ([ "$(ls -A "$gamedir/pixelart/")" ] || rm -r "$gamedir/pixelart/")
+    
+    find "$squashgamedir" -maxdepth 1 | sed -n '1!p' | while read squashfile
+    do
+      if [ "$usesymlink" == "y" ]; then
+        ln -s "${squashfile##$mountpoint}" "$gamedir/" > /dev/null 2>&1
+      else
+        rsync -a --ignore-existing "$squashfile" "$gamedir/" > /dev/null 2>&1
+      fi
+    done
+  done
+  sync
+  return 0
 }
 
 overmount_games(){
   local menu_code="000"
   [ -f "$installpath/menu" ] && menu_code="$(cat "$installpath/menu")"
-  [ -z "$menu_code" ] && menu_code="000"
+  containsGames "$rootfs$gamepath/$menu_code" || menu_code=""
   echo "menu code: $menu_code"
-  if [ "$menu_code" != "000" ]; then
-    if containsGames "$rootfs$gamepath/$menu_code"; then
-      overmount "$gamepath/$menu_code" "$gamepath" && linkGames "$rootfs$gamepath/$menu_code" && return 0
-    else
-      echo "no romz found at: $rootfs$gamepath/$menu_code"
-    fi
+  if containsGames "$rootfs$gamepath/$menu_code"; then
+    overmount "$gamepath/$menu_code" "$gamepath" && repair_games "$rootfs$gamepath/$menu_code" && linkGames "$rootfs$gamepath/$menu_code" && return 0
+  else
+    echo "no romz found at: $rootfs$gamepath/$menu_code"
   fi
-  if containsGames "$rootfs$gamepath"; then
-    overmount "$gamepath" && linkGames "$rootfs$gamepath" && return 0
-  fi
-  echo "no romz found at: $rootfs$gamepath"
   linkGames "$gamepath"
   return 1
 }

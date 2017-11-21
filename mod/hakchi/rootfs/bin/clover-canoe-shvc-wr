@@ -34,5 +34,5 @@ done
 
 args="$options $cfg_snes_extra_args"
 
-exec /bin/clover-canoe-shvc $args || \
-exec /usr/bin/clover-canoe-shvc $args
+[ -f "/bin/clover-canoe-shvc" ] && exec /bin/clover-canoe-shvc $args
+[ -f "/usr/bin/clover-canoe-shvc" ] && exec /usr/bin/clover-canoe-shvc $args
