@@ -283,21 +283,13 @@ repair_games(){
 overmount_games(){
   local menu_code="000"
   [ -f "$installpath/menu" ] && menu_code="$(cat "$installpath/menu")"
-  [ -z "$menu_code" ] && menu_code="000"
+  containsGames "$rootfs$gamepath/$menu_code" || menu_code=""
   echo "menu code: $menu_code"
-  if [ "$menu_code" != "000" ]; then
-    if containsGames "$rootfs$gamepath/$menu_code"; then
-      repair_fonts "$rootfs$gamepath/$menu_code"
-      overmount "$gamepath/$menu_code" "$gamepath" && repair_games "$rootfs$gamepath/$menu_code" && linkGames "$rootfs$gamepath/$menu_code" && return 0
-    else
-      echo "no romz found at: $rootfs$gamepath/$menu_code"
-    fi
+  if containsGames "$rootfs$gamepath/$menu_code"; then
+    overmount "$gamepath/$menu_code" "$gamepath" && repair_games "$rootfs$gamepath/$menu_code" && linkGames "$rootfs$gamepath/$menu_code" && return 0
+  else
+    echo "no romz found at: $rootfs$gamepath/$menu_code"
   fi
-  if containsGames "$rootfs$gamepath"; then
-    repair_fonts "$rootfs$gamepath"
-    overmount "$gamepath" && repair_games "$rootfs$gamepath" && linkGames "$rootfs$gamepath" && return 0
-  fi
-  echo "no romz found at: $rootfs$gamepath"
   linkGames "$gamepath"
   return 1
 }
