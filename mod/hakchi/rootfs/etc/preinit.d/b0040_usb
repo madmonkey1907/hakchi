@@ -19,10 +19,11 @@ checkUsbStorage(){
   mount -o $ro "$disk" "$mountpoint/media" || return 1
 
   local saves="$modname/saves"
-  if [ -d "$mountpoint/media/$saves" ]; then
+  
+  if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
     mount -o remount,$rw "$disk"
-    mount_bind "$mountpoint/media/$saves" "$mountpoint/var/lib/clover/profiles/0"
   fi
+  [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint/var/lib/clover/profiles/0"
 
   return 0
 }
