@@ -10,3 +10,6 @@
 [submodule "3rdparty/mkbootfs"]
 	path = 3rdparty/mkbootfs
 	url = https://github.com/osm0sis/mkbootfs/
+[submodule "3rdparty/decodepng"]
+	path = 3rdparty/decodepng
+	url = https://github.com/DanTheMan827/decodepng.git

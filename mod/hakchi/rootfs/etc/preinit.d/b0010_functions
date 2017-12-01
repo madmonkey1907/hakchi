@@ -335,7 +335,8 @@ showImage(){
   [ -f "$image" ] || image="$rootfs$1"
   [ -f "$image" ] || image="$squashfs$1"
   [ -f "$image" ] || return 1
-  xz -cd "$image" > "/dev/fb0" &
+  decodepng "$image" > "/dev/fb0" &
+  return 0
 }
 
 hwmon(){
