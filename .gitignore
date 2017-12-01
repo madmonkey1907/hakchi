@@ -8,5 +8,6 @@ kernel*/
 data/
 dump/
 mod/bin/
+mod/hakchi/rootfs/bin/decodepng
 mod/hakchi/transfer/
 .DS_Store

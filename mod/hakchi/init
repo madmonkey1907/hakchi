@@ -10,7 +10,7 @@ init(){
   /bin/busybox --install -s /bin/
   mkdir -p "$temppath"
   for dir in etc lib usr; do
-    [ -e "/$1" ] || ln -s "$mountpoint/$1" "/$1"
+    [ -e "/$dir" ] || ln -s "$mountpoint/$dir" "/$dir"
   done
   export PATH="/sbin:$modpath/rootfs/bin:/bin:$mountpoint/sbin:/usr/sbin:$mountpoint/bin:/usr/bin"
 
@@ -18,7 +18,7 @@ init(){
   source "$modpath/script/base"
 
   if [ -d "$modpath/transfer" ]; then
-    cf_usb='n'
+    export cf_usb='n'
     source "$modpath/script/transfer"
   else
     mount_base
