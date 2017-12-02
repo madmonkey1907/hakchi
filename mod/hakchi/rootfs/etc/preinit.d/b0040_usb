@@ -25,6 +25,17 @@ checkUsbStorage(){
   fi
   [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint/var/lib/clover/profiles/0"
 
+  local bootlogo0="boot.png"
+  local bootlogo1="$mountpoint/media/$modname/$bootlogo0"
+  local bootlogo2="$rootfs/etc/$bootlogo0"
+  if [ -f "$bootlogo1" ]; then
+    rsync -ac "$bootlogo1" "$bootlogo2"
+    showImage "$bootlogo2"
+    cfg_boot_logo=''
+  else
+    [ -f "$bootlogo2" ] && rm "$bootlogo2" && source "$preinit.d/p7010_bootlogo"
+  fi
+  
   return 0
 }
 
