@@ -1,24 +1,24 @@
 disableUsbDevice(){
   #disable usb
+  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
   echo 0 > "/sys/devices/sunxi_usb/usb_role"
 }
 
 switchToUsbDevice(){
+  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
   disableUsbDevice
-
   # enable device mode
   echo 2 > "/sys/devices/sunxi_usb/usb_role"
-
   # make sure the usb gadgets are disabled
   echo 0 > "/sys/devices/virtual/android_usb/android0/enable"
 }
 
 switchToUsbHost(){
+  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
   # make sure the usb gadgets are disabled
+  [ -f "/sys/devices/virtual/android_usb/android0/enable" ] && \
   echo 0 > "/sys/devices/virtual/android_usb/android0/enable"
-
   disableUsbDevice
-
   # enable host mode
   echo 1 > "/sys/devices/sunxi_usb/usb_role"
 }
@@ -63,9 +63,19 @@ checkUsbStorage(){
     showImage "$bootlogo2"
     cfg_boot_logo=''
   else
-    [ -f "$bootlogo2" ] && rm "$bootlogo2" && source "$preinit.d/p7010_bootlogo"
+    [ -f "$bootlogo2" ] && rm -f "$bootlogo2" && source "$preinit.d/p7010_bootlogo"
   fi
-  
+
+  local bootsound0="boot.wav"
+  local bootsound1="$mountpoint/media/$modname/$bootsound0"
+  local bootsound2="$rootfs/etc/$bootsound0"
+  if [ -f "$bootsound1" ]; then
+    [ -f "$bootsound2" ] || playSound "$bootsound1"
+    rsync -ac "$bootsound1" "$bootsound2"
+  else
+    rm -f "$bootsound2"
+  fi
+
   return 0
 }
 
@@ -74,12 +84,13 @@ checkUsbGamepath(){
   [ -b "$disk" ] || return 1
 
   local games="$modname/games"
+  local gameStorage="$installpath/games"
   if containsGames "$mountpoint/media/$games"; then
-    if ! mkdir -p "$rootfs$gamepath"; then
-      rm -rf "$rootfs$gamepath"
-      mkdir -p "$rootfs$gamepath" || return 1
+    if ! mkdir -p "$gameStorage"; then
+      rm -rf "$gameStorage"
+      mkdir -p "$gameStorage" || return 1
     fi
-    mount_bind "$mountpoint/media/$games" "$rootfs$gamepath"
+    mount_bind "$mountpoint/media/$games" "$gameStorage"
     return 0
   else
     echo "no romz found at: $disk:/$games"

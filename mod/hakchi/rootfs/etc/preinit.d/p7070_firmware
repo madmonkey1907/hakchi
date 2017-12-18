@@ -4,5 +4,4 @@ mod_repair_etc
 softwareCheck
 checkUsbGamepath
 
-# temporary
-[ "$(uname -n)" == "madmonkey" ] && overmount "/lib/modules"
+overmountModules

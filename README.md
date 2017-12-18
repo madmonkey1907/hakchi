@@ -5,8 +5,7 @@ Clone the repo:
 ```
 git clone git@github.com:madmonkey1907/hakchi.git
 cd hakchi
-git submodule init
-git submodule update
+git submodule update --init --recursive
 ```
 
 ## Install the build dependencies
