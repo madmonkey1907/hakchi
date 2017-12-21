@@ -51,7 +51,8 @@ checkUsbStorage(){
   local saves="$modname/saves"
   
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
-    mount -o remount,$rw "$disk"
+    umount "$mountpoint/media"
+    mount -o $rw "$disk" "$mountpoint/media" || return 1
   fi
   [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint/var/lib/clover/profiles/0"
 
@@ -85,7 +86,7 @@ checkUsbGamepath(){
 
   local games="$modname/games"
   local gameStorage="$installpath/games"
-  if containsGames "$mountpoint/media/$games"; then
+  if containsGames "$mountpoint/media/$games" || containsGames "$mountpoint/media/$games/000"; then
     if ! mkdir -p "$gameStorage"; then
       rm -rf "$gameStorage"
       mkdir -p "$gameStorage" || return 1
@@ -93,7 +94,7 @@ checkUsbGamepath(){
     mount_bind "$mountpoint/media/$games" "$gameStorage"
     return 0
   else
-    echo "no romz found at: $disk:/$games"
+    echo "no romz found at: $disk/$games"
     return 1
   fi
 }

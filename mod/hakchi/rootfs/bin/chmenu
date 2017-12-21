@@ -3,7 +3,7 @@ source /etc/preinit
 script_init
 
 gameStorage="$installpath/games"
-state_file="$gameStorage/menu.txt"
+state_file="/var/saves/$modname/menu"
 
 [ -z "$1" ] && exit 1
 [ -f "$state_file" ] && prev_code="$(cat "$state_file")" || prev_code="000"

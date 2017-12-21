@@ -239,6 +239,8 @@ softwareCheck(){
     [ -f "$feck.nes" ] && mv -f "$feck.nes" "$feck"
   fi
 
+  mkdir -p "$mountpoint/var/lib/clover/profiles/0/$modname"
+
   rm -f "$mountpoint/var/saves"
   ln -s "/var/lib/clover/profiles/0" "$mountpoint/var/saves"
 }
@@ -289,9 +291,10 @@ repair_games(){
 
 overmount_games(){
   local gameStorage="$installpath/games"
+  local state_file="$mountpoint/var/lib/clover/profiles/0/$modname/menu"
   local menu_code="$1"
-  [ -z "$1" ] && menucode="000"
-  [ -z "$1" ] && [ -f "$gameStorage/menu.txt" ] && menu_code="$(cat "$gameStorage/menu.txt")"
+  [ -z "$1" ] && menu_code="000"
+  [ -z "$1" ] && [ -f "$state_file" ] && menu_code="$(cat "$state_file")"
   containsGames "$gameStorage/$menu_code" || menu_code=""
   echo "menu code: $menu_code"
   if containsGames "$gameStorage/$menu_code"; then
@@ -300,7 +303,7 @@ overmount_games(){
     linkGames "$gameStorage/$menu_code" && \
     return 0
   else
-    echo "no romz found at: $rootfs$gamepath/$menu_code"
+    echo "no romz found at: $gameStorage/$menu_code"
   fi
   linkGames "$gamepath"
   return 1
