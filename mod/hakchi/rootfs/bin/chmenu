@@ -3,7 +3,8 @@ source /etc/preinit
 script_init
 
 gameStorage="$installpath/games"
-state_file="/var/saves/$modname/menu"
+state_path="/var/saves/$modname"
+state_file="$state_path/menu"
 
 [ -z "$1" ] && exit 1
 [ -f "$state_file" ] && prev_code="$(cat "$state_file")" || prev_code="000"
@@ -12,6 +13,7 @@ state_file="/var/saves/$modname/menu"
 echo "Switching to menu $1"
 targetpath="$gameStorage/$1"
 containsGames "$targetpath" || exit 1
+mkdir -p "$state_path"
 echo "$1" > "$state_file"
 
 echo "New directory: $targetpath"

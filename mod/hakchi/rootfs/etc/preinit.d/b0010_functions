@@ -100,7 +100,7 @@ checkFirmware(){
 }
 
 currentFirmware(){
-  local firmware="$(losetup | awk '{print $3'})"
+  local firmware="$(losetup -a | awk '{print $3'})"
   if ! [ -z "$firmware" ]; then
     echo "$firmware"
     return 0
@@ -248,58 +248,40 @@ softwareCheck(){
 repair_fonts(){
   if [ "$sftype" == "nes" ]; then
     mkdir -p "$1" || return 1
-    [ ! -f "$1/title.fnt" ] && (copy "$rootfs$gamepath/title.fnt" "$1" || copy "$squashfs$gamepath/title.fnt" "$1")
-    [ ! -f "$1/copyright.fnt" ] && (copy "$rootfs$gamepath/copyright.fnt" "$1" || copy "$squashfs$gamepath/copyright.fnt" "$1")
+    [ ! -f "$1/title.fnt" ] && (copy "$rootfs$gamepath/title.fnt" "$1/" || copy "$squashfs$gamepath/title.fnt" "$1/")
+    [ ! -f "$1/copyright.fnt" ] && (copy "$rootfs$gamepath/copyright.fnt" "$1/" || copy "$squashfs$gamepath/copyright.fnt" "$1/")
   fi
 }
 
-repair_games(){
-  [ -w "$1" ] || return 0
-  local usesymlink=''
-  ln -s / "$1/symlinktest" 2>/dev/null && rm -f "$1/symlinktest" && usesymlink='y'
-
-  ls -1 "$squashfs$gamepath" | grep CLV- | while read code
-  do
-    local gamedir="$1/$code"
-    local squashgamedir="$squashfs$gamepath/$code"
-
-    [ -d "$gamedir" ] || continue
-
-    if [ ! -f "$gamedir/$code.desktop" ]; then
-      cp "$squashgamedir/$code.desktop" "$gamedir/"
-      [ "$sftype" == "nes" ] && \
-        sed -i -e 's#/usr/bin/clover-kachikachi#/bin/clover-kachikachi-wr#g' "$gamedir/$code.desktop"
-      [ "$sftype" == "snes" ] && \
-        sed -i -e 's#/usr/bin/clover-canoe-shvc#/bin/clover-canoe-shvc-wr#g' "$gamedir/$code.desktop"
-    fi
-
-    [ -d "$gamedir/autoplay/" ] && ([ "$(ls -A "$gamedir/autoplay/")" ] || rm -rf "$gamedir/autoplay/")
-    [ -d "$gamedir/pixelart/" ] && ([ "$(ls -A "$gamedir/pixelart/")" ] || rm -rf "$gamedir/pixelart/")
-
-    find "$squashgamedir" -maxdepth 1 | sed -n '1!p' | while read squashfile
-    do
-      if [ "$usesymlink" == "y" ]; then
-        ln -s "${squashfile##$mountpoint}" "$gamedir/" > /dev/null 2>&1
-      else
-        rsync -a --ignore-existing "$squashfile" "$gamedir/" > /dev/null 2>&1
-      fi
-    done
-  done
-  sync
-  return 0
+multiboot_getcode(){
+  local code="$sftype-$sfregion"
+  [ "$sftype-$sfregion" == "snes-eur" ] && code="snes-usa"
+  echo "$code"
 }
 
 overmount_games(){
+  local mb_systemcode="$(multiboot_getcode)"
   local gameStorage="$installpath/games"
-  local state_file="$mountpoint/var/lib/clover/profiles/0/$modname/menu"
+  local firmware=$(currentFirmware)
+  if [ -d "$gameStorage/$mb_systemcode" ] || [ "$firmware" != "_nand_" ]; then
+    [ "$cfg_separate_games" == "y" ] && gameStorage=$gameStorage/$mb_systemcode
+  fi
+  local state_path="$mountpoint/var/lib/clover/profiles/0"
+  if [ "$cfg_separate_saves" == "y" ] && [ -z "$1" ] && [ "$firmware" != "_nand_" ]; then
+    local mb_state_path="$state_path/$mb_systemcode"
+    mkdir -p "$mb_state_path"
+    mount_bind "$mb_state_path" "$state_path"
+  fi
+  local state_file="$state_path/$modname/menu"
   local menu_code="$1"
   [ -z "$1" ] && menu_code="000"
   [ -z "$1" ] && [ -f "$state_file" ] && menu_code="$(cat "$state_file")"
   containsGames "$gameStorage/$menu_code" || menu_code=""
+  echo "system code: $mb_systemcode"
   echo "menu code: $menu_code"
   if containsGames "$gameStorage/$menu_code"; then
-    overmount "/../games/$menu_code" "$gamepath" && \
-    repair_games "$gameStorage/$menu_code" && \
+    mount_bind "$gameStorage/$menu_code" "$mountpoint/$gamepath" && \
+    repair_fonts "$gameStorage/$menu_code" && \
     linkGames "$gameStorage/$menu_code" && \
     return 0
   else
@@ -371,7 +353,6 @@ showImage(){
   waitTask decodepng
   return 0
 }
-
 
 playSound(){
   local wavfile="$(eval echo "$1")"

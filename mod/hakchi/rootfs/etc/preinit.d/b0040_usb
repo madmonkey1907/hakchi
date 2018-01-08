@@ -49,6 +49,7 @@ checkUsbStorage(){
   mount -o $ro "$disk" "$mountpoint/media" || return 1
 
   local saves="$modname/saves"
+  local mb_systemcode="$(multiboot_getcode)"
   
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
     umount "$mountpoint/media"
@@ -86,7 +87,8 @@ checkUsbGamepath(){
 
   local games="$modname/games"
   local gameStorage="$installpath/games"
-  if containsGames "$mountpoint/media/$games" || containsGames "$mountpoint/media/$games/000"; then
+  local mb_systemcode="$(multiboot_getcode)"
+  if containsGames "$mountpoint/media/$games/$mb_systemcode" || containsGames "$mountpoint/media/$games/$mb_systemcode/000" || containsGames "$mountpoint/media/$games" || containsGames "$mountpoint/media/$games/000"; then
     if ! mkdir -p "$gameStorage"; then
       rm -rf "$gameStorage"
       mkdir -p "$gameStorage" || return 1
