@@ -228,7 +228,7 @@ softwareCheck(){
   [ "$(cat "$mountpoint/etc/clover/REGION")" == "JPN" ] && sfregion="jpn"
   [ "$(cat "$mountpoint/etc/clover/REGION")" == "EUR" ] && sfregion="eur"
 
-  local feck="$mountpoint/var/lib/clover/profiles/0/home-menu/save/system-save.json"
+  local feck="$mountpoint$profilepath/home-menu/save/system-save.json"
   if [ "$sftype" == "snes" ]; then
     gamepath="/usr/share/games"
     [ -f "$feck" ] && mv -f "$feck" "$feck.nes"
@@ -239,10 +239,10 @@ softwareCheck(){
     [ -f "$feck.nes" ] && mv -f "$feck.nes" "$feck"
   fi
 
-  mkdir -p "$mountpoint/var/lib/clover/profiles/0/$modname"
+  mkdir -p "$mountpoint$profilepath/$modname"
 
   rm -f "$mountpoint/var/saves"
-  ln -s "/var/lib/clover/profiles/0" "$mountpoint/var/saves"
+  ln -s "$profilepath" "$mountpoint/var/saves"
 }
 
 repair_fonts(){
@@ -253,31 +253,29 @@ repair_fonts(){
   fi
 }
 
-multiboot_getcode(){
+multibootGetPath(){
+  local spath="$1"
   local code="$sftype-$sfregion"
-  [ "$sftype-$sfregion" == "snes-eur" ] && code="snes-usa"
-  echo "$code"
+  local cpath="$spath/$code"
+  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
+  code="$sftype"
+  cpath="$spath/$code"
+  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
+  cpath="$spath"
+  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
+  echo "$spath"
+  return 1
 }
 
 overmount_games(){
-  local mb_systemcode="$(multiboot_getcode)"
   local gameStorage="$installpath/games"
-  local firmware=$(currentFirmware)
-  if [ -d "$gameStorage/$mb_systemcode" ] || [ "$firmware" != "_nand_" ]; then
-    [ "$cfg_separate_games" == "y" ] && gameStorage=$gameStorage/$mb_systemcode
-  fi
-  local state_path="$mountpoint/var/lib/clover/profiles/0"
-  if [ "$cfg_separate_saves" == "y" ] && [ -z "$1" ] && [ "$firmware" != "_nand_" ]; then
-    local mb_state_path="$state_path/$mb_systemcode"
-    mkdir -p "$mb_state_path"
-    mount_bind "$mb_state_path" "$state_path"
-  fi
-  local state_file="$state_path/$modname/menu"
+  gameStorage="$(multibootGetPath "$gameStorage")"
+  local state_path="$mountpoint$profilepath/$modname"
+  local state_file="$state_path/menu"
   local menu_code="$1"
   [ -z "$1" ] && menu_code="000"
   [ -z "$1" ] && [ -f "$state_file" ] && menu_code="$(cat "$state_file")"
   containsGames "$gameStorage/$menu_code" || menu_code=""
-  echo "system code: $mb_systemcode"
   echo "menu code: $menu_code"
   if containsGames "$gameStorage/$menu_code"; then
     mount_bind "$gameStorage/$menu_code" "$mountpoint/$gamepath" && \

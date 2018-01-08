@@ -49,13 +49,12 @@ checkUsbStorage(){
   mount -o $ro "$disk" "$mountpoint/media" || return 1
 
   local saves="$modname/saves"
-  local mb_systemcode="$(multiboot_getcode)"
   
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
     umount "$mountpoint/media"
     mount -o $rw "$disk" "$mountpoint/media" || return 1
   fi
-  [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint/var/lib/clover/profiles/0"
+  [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint$profilepath"
 
   local bootlogo0="boot.png"
   local bootlogo1="$mountpoint/media/$modname/$bootlogo0"
@@ -86,17 +85,17 @@ checkUsbGamepath(){
   [ -b "$disk" ] || return 1
 
   local games="$modname/games"
+  local gameSource="$mountpoint/media/$games"
   local gameStorage="$installpath/games"
-  local mb_systemcode="$(multiboot_getcode)"
-  if containsGames "$mountpoint/media/$games/$mb_systemcode" || containsGames "$mountpoint/media/$games/$mb_systemcode/000" || containsGames "$mountpoint/media/$games" || containsGames "$mountpoint/media/$games/000"; then
+  if [ -d "$gameSource" ]; then
     if ! mkdir -p "$gameStorage"; then
       rm -rf "$gameStorage"
       mkdir -p "$gameStorage" || return 1
     fi
-    mount_bind "$mountpoint/media/$games" "$gameStorage"
+    mount_bind "$gameSource" "$gameStorage"
     return 0
   else
-    echo "no romz found at: $disk/$games"
+    echo "no romz found at: $disk:/$games"
     return 1
   fi
 }
