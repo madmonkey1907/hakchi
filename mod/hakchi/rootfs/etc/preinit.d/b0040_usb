@@ -79,23 +79,3 @@ checkUsbStorage(){
 
   return 0
 }
-
-checkUsbGamepath(){
-  local disk="/dev/sda1"
-  [ -b "$disk" ] || return 1
-
-  local games="$modname/games"
-  local gameSource="$mountpoint/media/$games"
-  local gameStorage="$installpath/games"
-  if [ -d "$gameSource" ]; then
-    if ! mkdir -p "$gameStorage"; then
-      rm -rf "$gameStorage"
-      mkdir -p "$gameStorage" || return 1
-    fi
-    mount_bind "$gameSource" "$gameStorage"
-    return 0
-  else
-    echo "no romz found at: $disk:/$games"
-    return 1
-  fi
-}

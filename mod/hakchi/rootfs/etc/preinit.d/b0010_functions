@@ -253,23 +253,25 @@ repair_fonts(){
   fi
 }
 
-multibootGetPath(){
-  local spath="$1"
-  local code="$sftype-$sfregion"
-  local cpath="$spath/$code"
-  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
-  code="$sftype"
-  cpath="$spath/$code"
-  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
-  cpath="$spath"
-  (containsGames "$cpath" || containsGames "$cpath/000") && echo "$cpath" && return 0
-  echo "$spath"
+checkGamepath(){
+  containsGames "$1" && echo "$1" && return 0
+  containsGames "$1/000" && echo "$1" && return 0
+  return 1
+}
+
+findGameStorage(){
+  checkGamepath "$mountpoint/media/hakchi/games/$sftype-$sfregion" && return 0
+  checkGamepath "$mountpoint/media/hakchi/games/$sftype" && return 0
+  checkGamepath "$mountpoint/media/hakchi/games" && return 0
+  
+  checkGamepath "$installpath/games/$sftype-$sfregion" && return 0
+  checkGamepath "$installpath/games/$sftype" && return 0
+  checkGamepath "$installpath/games" && return 0
   return 1
 }
 
 overmount_games(){
-  local gameStorage="$installpath/games"
-  gameStorage="$(multibootGetPath "$gameStorage")"
+  local gameStorage="$(findGameStorage)" || return 0
   local state_path="$mountpoint$profilepath/$modname"
   local state_file="$state_path/menu"
   local menu_code="$1"

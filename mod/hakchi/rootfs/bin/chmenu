@@ -10,10 +10,14 @@ state_file="$state_path/menu"
 [ "$1" == "$prev_code" ] && exit 1
 
 echo "Switching to menu $1"
-gameStorage="$installpath/games"
-gameStorage="$(multibootGetPath "$gameStorage")"
+gameStorage="$(findGameStorage)"
 targetpath="$gameStorage/$1"
-containsGames "$targetpath" || exit 1
+if ! containsGames "$targetpath"; then
+  [ "$1" == "000" ] || exit 1
+  targetpath="$gameStorage"
+  containsGames "$targetpath" || exit 1
+fi
+
 mkdir -p "$state_path"
 echo "$1" > "$state_file"
 

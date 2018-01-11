@@ -2,6 +2,5 @@
 mod_repair_etc
 
 softwareCheck
-checkUsbGamepath
 
 overmountModules
