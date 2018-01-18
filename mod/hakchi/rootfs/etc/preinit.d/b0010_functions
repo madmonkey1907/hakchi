@@ -128,8 +128,12 @@ loadFirmware(){
   local firmware="$mountpoint$cfg_firmware"
   if ! checkFirmware "$firmware"; then
     [ "$cfg_firmware" == "auto" ] || return 0
-    [ -d "$firmwarepath" ] || return 0
-    firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n 1)"
+    [ -d "$extfirmwarepath" ] && \
+    firmware="$(find "$extfirmwarepath" -type f -name "*.hsqs" | sort | head -n1)"
+    if ! checkFirmware "$firmware"; then
+      [ -d "$firmwarepath" ] && \
+      firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n1)"
+    fi
   fi
   checkFirmware "$firmware" || return 0
 
@@ -188,6 +192,8 @@ restore(){
 mount_bind(){
   if mountpoint -q "$2"; then
     umount "$2" || umount -f "$2"
+  else
+    umount "$2" 2>/dev/null
   fi
   mount -o bind "$1" "$2"
 }
@@ -259,11 +265,23 @@ checkGamepath(){
   return 1
 }
 
+checkPath(){
+  [ -d "$1" ] && echo "$1" && return 0
+  return 1
+}
+
+findGameSyncStorage(){
+  checkPath "$mountpoint/media/hakchi/games" && return 0
+  mkdir -p "$installpath/games"
+  checkPath "$installpath/games" && return 0
+  return 1
+}
+
 findGameStorage(){
   checkGamepath "$mountpoint/media/hakchi/games/$sftype-$sfregion" && return 0
   checkGamepath "$mountpoint/media/hakchi/games/$sftype" && return 0
   checkGamepath "$mountpoint/media/hakchi/games" && return 0
-  
+
   checkGamepath "$installpath/games/$sftype-$sfregion" && return 0
   checkGamepath "$installpath/games/$sftype" && return 0
   checkGamepath "$installpath/games" && return 0
@@ -366,4 +384,47 @@ playSound(){
 
 hwmon(){
   cat "/sys/devices/virtual/hwmon/hwmon1/temp1_input"
+}
+
+usedBlockSpace(){
+  local path="$1"
+  [ -e "$path" ] || path="$rootfs"
+  local line="$(df -k "$path" | tail -n1)"
+  local used="$(echo "$line" | awk '{print $3}')"
+  local available="$(echo "$line" | awk '{print $4}')"
+  local total="$(($used+$available))"
+  echo "$used $total"
+}
+
+freeBlockSpace(){
+  local path="$1"
+  [ -e "$path" ] || path="$rootfs"
+  df -k "$path" | tail -n1 | awk '{print $4}'
+}
+
+usedSpace(){
+# Warning: SLOW
+  local path="$1"
+  [ -e "$path" ] || path="$rootfs"
+  du -ksx "$path" | awk '{print $1}'
+}
+
+usedBy(){
+  case "$1" in
+    games)
+      usedSpace "$(findGameSyncStorage)"
+      ;;
+    saves)
+      usedSpace "$profilepath"
+      ;;
+    mods)
+      usedSpace "$rootfs"
+      ;;
+    firmware)
+      usedSpace "$firmwarepath"
+      ;;
+    *)
+      echo "Usage: usedBy {games|saves|mods|firmware}"
+      return 1
+  esac
 }

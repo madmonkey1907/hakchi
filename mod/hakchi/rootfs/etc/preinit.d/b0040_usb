@@ -30,30 +30,40 @@ getUsbStorageIds(){
   done
 }
 
-checkUsbStorage(){
+waitForUsbDevice(){
   [ -z "$(getUsbStorageIds)" ] && return 1
-  
-  local disk="/dev/sda1"
-
+  local blockDevice="$1"
   local timeout=5
-  while [ $timeout -gt 0 ] && ! [ -b "$disk" ]; do
+  while [ $timeout -gt 0 ] && ! [ -b "$blockDevice" ]; do
     echo "waiting for media $timeout"
     let timeout=timeout-1
     sleep 1
   done
+  [ -b "$blockDevice" ]
+}
 
-  [ -b "$disk" ] || return 1
+checkStorageDevice(){
+  local blockDevice="$1"
+  [ -b "$blockDevice" ] || return 1
 
   local ro="defaults,nosuid,nodev,noatime,ro"
   local rw="defaults,nosuid,nodev,noatime,rw"
-  mount -o $ro "$disk" "$mountpoint/media" || return 1
-
   local saves="$modname/saves"
-  
-  if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
-    umount "$mountpoint/media"
-    mount -o $rw "$disk" "$mountpoint/media" || return 1
+
+  if ! [ "$cfg_usb_rw" == "y" ]; then
+    mount -o $ro "$blockDevice" "$mountpoint/media" || return 1
   fi
+
+  if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
+    umount "$mountpoint/media" 2>/dev/null
+    mount -o $rw "$blockDevice" "$mountpoint/media" || return 1
+  fi
+
+  if ! [ -d "$mountpoint/media/$modname" ]; then
+    umount "$mountpoint/media"
+    return 1
+  fi
+
   [ -d "$mountpoint/media/$saves" ] && mount_bind "$mountpoint/media/$saves" "$mountpoint$profilepath"
 
   local bootlogo0="boot.png"
@@ -78,4 +88,23 @@ checkUsbStorage(){
   fi
 
   return 0
+}
+
+checkExtStorage(){
+  local di
+  local d
+  local p
+  local blockDevice="/dev/sd"
+  waitForUsbDevice "${blockDevice}a1"
+  for di in $(seq 97 99); do
+    d="$(printf "\\$(printf %o $di)\n")"
+    for p in $(seq 1 9); do
+      checkStorageDevice "$blockDevice$d$p" && return 0
+    done
+  done
+  blockDevice="/dev/mmcblk0p"
+  for p in $(seq 1 9); do
+    checkStorageDevice "$blockDevice$p" && return 0
+  done
+  return 1
 }
