@@ -8,7 +8,6 @@ hakchi(){
     set|unset)
       if echo "$2" | grep -qEe '^cfg_'; then
         [ "$1" == "set" ] && eval "$2="$3"" || unset "$2"
-        save_config
         return 0
       else
         echo "only cfg_ variables are supported with hakchi $1"
@@ -16,7 +15,7 @@ hakchi(){
       return 1
       ;;
     get)
-      eval "echo "$2""
+      eval "echo "\$$2""
       return 0
       ;;
     eval)
@@ -31,14 +30,18 @@ hakchi(){
       source "$2"
       return $?
       ;;
+    *)
+      if type "$1" | grep -q '^.* is a shell function$' 2>/dev/null; then
+        ${1+"$@"}
+      else
+        echo "no such function: $@"
+        return 1
+      fi
+      ;;
   esac
-
-  if type "$1" | grep -q '^.* is a shell function$' 2>/dev/null; then
-    ${1+"$@"}
-  else
-    echo "no such function: $@"
-    return 1
-  fi
 }
 
 hakchi "$(basename "$0")" ${1+"$@"}
+exit_code=$?
+save_config
+exit $exit_code
