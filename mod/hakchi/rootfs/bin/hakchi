@@ -7,7 +7,7 @@ hakchi(){
   case "$1" in
     set|unset)
       if echo "$2" | grep -qEe '^cfg_'; then
-        [ "$1" == "set" ] && eval "$2="$3"" || unset "$2"
+        [ "$1" == "set" ] && eval "$2="\${3}"" || unset "$2"
         return 0
       else
         echo "only cfg_ variables are supported with hakchi $1"
