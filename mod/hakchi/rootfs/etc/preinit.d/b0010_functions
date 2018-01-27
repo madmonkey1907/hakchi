@@ -295,7 +295,10 @@ overmount_games(){
   local menu_code="$1"
   [ -z "$1" ] && menu_code="000"
   [ -z "$1" ] && [ -f "$state_file" ] && menu_code="$(cat "$state_file")"
-  containsGames "$gameStorage/$menu_code" || menu_code=""
+  if ! containsGames "$gameStorage/$menu_code"; then
+    menu_code="000"
+    containsGames "$gameStorage/$menu_code" || menu_code=""
+  fi
   echo "menu code: $menu_code"
   if containsGames "$gameStorage/$menu_code"; then
     mount_bind "$gameStorage/$menu_code" "$mountpoint/$gamepath" && \
