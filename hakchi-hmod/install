@@ -1,0 +1,5 @@
+rm -f "./etc/preinit.d/p0000_config"
+cd "./bin/"
+./busybox --list | xargs -n1 ln -s "/bin/busybox" 2>/dev/null || true
+cd ".."
+return 0
