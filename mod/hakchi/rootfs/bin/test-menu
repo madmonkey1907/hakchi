@@ -1,4 +1,2 @@
 #!/bin/sh
-uistop 1>/dev/null 2>&1
-/opt/test/bin/test-menu </dev/null
-uistart
+exec /opt/test/bin/test-menu </dev/null

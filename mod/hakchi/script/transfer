@@ -23,11 +23,11 @@ fi
 
 # transfer firmware, if any
 if [ -d "$transferpath/firmware" ]; then
-  local firmware="$(find "$transferpath/firmware" -type f -name "*.hsqs" | sort | head -n 1)"
+  local firmware="$(find "$transferpath/firmware/" -type f -name "*.hsqs" | sort | head -n 1)"
   if [ -f "$firmware" ]; then
     mkdir -p "$firmwarepath"
     local firmware_name="$(basename "$firmware")"
-    find "$firmwarepath" -type f -not -name "$firmware_name" -delete
+    find "$firmwarepath/" -type f -not -name "$firmware_name" -delete
     echo "transferring firmware..."
     copy "$firmware" "$firmwarepath/"
     cfg_firmware="auto"

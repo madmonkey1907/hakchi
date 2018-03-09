@@ -15,7 +15,7 @@ if [ "$2" = "notx" ]; then
   rm -f "$inpath/initramfs/bin/rsync"
 fi
 
-#(cd "$inpath/initramfs";find . -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
+#(cd "$inpath/initramfs";find -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
 mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"
 
 kernelzImage="$inpath/../data/zImage"

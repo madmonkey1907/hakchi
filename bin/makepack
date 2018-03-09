@@ -8,4 +8,4 @@ name="$(basename "$input" "$ext")"
 output="$(pwd)/$name$ext.tgz"
 
 rm -f "$output"
-(cd "$input" && tar -cz --owner=root --group=root --numeric-owner -f "$output" * && echo ok)
+(cd "$input" && tar -mcz --owner=root --group=root --numeric-owner -f "$output" * && echo ok)

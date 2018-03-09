@@ -129,10 +129,10 @@ loadFirmware(){
   if ! checkFirmware "$firmware"; then
     [ "$cfg_firmware" == "auto" ] || return 0
     [ -d "$extfirmwarepath" ] && \
-    firmware="$(find "$extfirmwarepath" -type f -name "*.hsqs" | sort | head -n1)"
+    firmware="$(find "$extfirmwarepath/" -type f -name "*.hsqs" | sort | head -n1)"
     if ! checkFirmware "$firmware"; then
       [ -d "$firmwarepath" ] && \
-      firmware="$(find "$firmwarepath" -type f -name "*.hsqs" | sort | head -n1)"
+      firmware="$(find "$firmwarepath/" -type f -name "*.hsqs" | sort | head -n1)"
     fi
   fi
   checkFirmware "$firmware" || return 0
@@ -163,8 +163,8 @@ reboot(){
 
 early_getty(){
   cd "$modpath/transfer"
-  getty -ni 115200 ttyS0 -l /bin/sh
-  cd /
+  preinit="$preinit" getty -ni 115200 ttyS0 -l /bin/sh
+  cd - 1>/dev/null
 }
 
 copy(){

@@ -6,13 +6,13 @@ init(){
   export modpath="/$modname"
   export mountpoint="/newroot"
   export temppath="/tmp"
-  export bootVersion="1.0.1"
+  export bootVersion="1.0.2"
   echo "$modname init script version: $bootVersion"
 
-  /bin/busybox --install -s /bin/
+  ln -s "$modpath/rootfs/etc" "/"
   mkdir -p "$temppath"
-  for dir in etc lib usr; do
-    [ -e "/$dir" ] || ln -s "$mountpoint/$dir" "/$dir"
+  for dir in lib usr sbin; do
+    [ -e "/$dir" ] || ln -s "$mountpoint/$dir" "/"
   done
   export PATH="/sbin:$modpath/rootfs/bin:/bin:$mountpoint/sbin:/usr/sbin:$mountpoint/bin:/usr/bin"
 

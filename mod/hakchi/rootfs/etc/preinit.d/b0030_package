@@ -24,8 +24,10 @@ transfer_path(){
   find "$transferpath/" -maxdepth 1 -type f -iname "*.md" -delete
   local docopy=y
   cd "$transferpath"
-  [ -d "./bin" ] && chmod 755 ./bin/*
-  [ -d "./etc/init.d" ] && chmod 755 ./etc/init.d/*
+  for dir in bin sbin usr/bin usr/sbin etc/init.d; do
+    [ -d "./$dir" ] && chmod 755 ./$dir/*
+  done
+  [ -d "./etc/preinit.d" ] && chmod 644 ./etc/preinit.d/*
   transfer_file "$transferpath/install" || docopy=n
   cd "$transferpath"
   transfer_file "$transferpath/transfer" || docopy=n
@@ -57,9 +59,9 @@ pack_install(){
   echo >> "$transferpath/uninstall"
   echo "# auto-generated" >> "$transferpath/uninstall"
   cd "$transferpath"
-  find . -type l -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
-  find . -type f -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
-  find . -depth -mindepth 1 -type d -exec echo rmdir \"\$rootfs/{}\" + >> "$transferpath/uninstall"
+  find -type l -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
+  find -type f -exec echo rm -f \"\$rootfs/{}\" + >> "$transferpath/uninstall"
+  find -depth -mindepth 1 -type d -exec echo rmdir \"\$rootfs/{}\" + >> "$transferpath/uninstall"
   [ $(stat -c%s "$transferpath/uninstall") -gt 8 ] || rm -f "$transferpath/uninstall"
   cd /
   local unfile="$(pack_upath "$packFile")"
@@ -103,7 +105,7 @@ pack_uninstall(){
 
 packs_install(){
   [ -d "$1" ] || return 1
-  for i in $(find "$1" -maxdepth 1 -name "*.hmod" | sort); do
+  for i in $(find "$1/" -maxdepth 1 -name "*.hmod" | sort); do
     pack_install "$i"
     rm -rf "$i"
   done

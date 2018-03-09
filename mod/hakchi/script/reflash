@@ -1,6 +1,6 @@
 umount_base
 
-local firmware="$(find -type f -name "*.hsqs" | sort | head -n 1)"
+local firmware="$(find -type f -name "*.hsqs" | sort | head -n1)"
 if [ -f "$firmware" ]; then
   umount "$mountpoint"
 
@@ -19,11 +19,10 @@ unset firmware
 
 local tmk="$(pwd)/mkfs.txz"
 if [ -f "$tmk"]; then
-  rm "/lib"
+  rm -f "/lib"
   cd / && tar xJf "$tmk"
   mount_bind "$mountpoint/lib" "/lib"
-#  /sbin/mkfs.ext4 -L data -m 0 /dev/nandc
-  mkfs.ext2 -L data -m 0 /dev/nandc
+  yes | /sbin/mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum /dev/nandc
   umount "/lib"
 fi
 unset tmk

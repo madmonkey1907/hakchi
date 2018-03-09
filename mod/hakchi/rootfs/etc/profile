@@ -33,3 +33,5 @@ fi
 export PATH PS1 OPIEDIR QPEDIR QTDIR EDITOR TERM
 
 umask 022
+
+eval $(resize)

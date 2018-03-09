@@ -1,0 +1,12 @@
+	squashfs
+	ext4
+	ext3
+	ext2
+	ntfs
+	vfat
+	exfat
+	cramfs
+	fuseblk
+	iso9660
+	msdos
+	udf
