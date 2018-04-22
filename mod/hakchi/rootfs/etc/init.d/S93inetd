@@ -1,0 +1,36 @@
+#!/bin/sh
+NAME="inetd"
+DAEMON="/bin/$NAME"
+case "$1" in
+  start)
+    echo -n "Starting $NAME: "
+    mkdir -p "/etc/dropbear"
+    start-stop-daemon -S -q -x "$DAEMON" && echo "OK" || echo "Failed"
+  ;;
+  stop)
+    echo -n "Stopping $NAME: "
+    start-stop-daemon -K -q -n "$NAME" && echo "OK" || echo "Failed"
+    for s in $(cat "/etc/inetd.conf" | awk '{print $6}'); do
+      killall -q "$s"
+    done
+    usleep 200000
+    for s in $(cat "/etc/inetd.conf" | awk '{print $6}'); do
+      killall -q -9 "$s"
+    done
+  ;;
+  status)
+    start-stop-daemon -K -q -n "$NAME" -t && echo "is running" && exit 0
+    echo "not running" && exit 1
+  ;;
+  restart)
+    "$0" stop
+    "$0" start
+  ;;
+  reload)
+    killall -q -HUP "$NAME"
+  ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|restart|reload}"
+    exit 1
+  ;;
+esac

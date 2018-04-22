@@ -12,11 +12,11 @@ mod_repair(){
   copy "$mountpoint/bin/" "$bin/"
   copy "/bin/" "$bin/"
   copy "$modpath/rootfs/bin/" "$bin/"
-  copy "/sbin/cryptsetup" "$bin/cryptsetup"
+  [ -f "/sbin/cryptsetup" ] && copy "/sbin/cryptsetup" "$bin/cryptsetup"
   copy "$bin/" "$modpath/rootfs/bin/"
   rm -rf "$bin"
 
-  copy "/key-file" "$modpath/rootfs/etc/key-file"
+  [ -f "/key-file" ] && copy "/key-file" "$modpath/rootfs/etc/key-file"
   chown -R 0:0 "$modpath/"
   cd "$modpath/rootfs/bin" && chmod 755 *
   cd "$modpath/rootfs/etc/init.d" && chmod 755 *

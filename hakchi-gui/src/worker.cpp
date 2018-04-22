@@ -365,8 +365,7 @@ void Worker::do_writeNandFull()
     {
         return;
     }
-//    const size_t block=0x2000000;
-    const size_t block=1*1024*1024;
+    const size_t block=0x2000000;
     const size_t count=0x10;
     calcProgress(0-(block*count));
     const QString nandFile("dump/nand.bin");

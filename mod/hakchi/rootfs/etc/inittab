@@ -9,8 +9,8 @@ null::sysinit:/bin/mkdir -p /var/cache/clover/reed-libs/tmp /var/lib/clover/prof
 
 null::sysinit:/etc/init.d/rcS
 
-null::respawn:/sbin/getty 115200 ttyS0
+null::respawn:/bin/getty 115200 ttyS0
 
-null::ctrlaltdel:/sbin/reboot
+null::ctrlaltdel:/bin/reboot
 null::shutdown:/etc/init.d/rcK
 null::shutdown:/bin/umount -a -r

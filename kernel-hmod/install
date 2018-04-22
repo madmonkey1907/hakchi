@@ -1,0 +1,26 @@
+# if no kexec, abort
+(uname -r | grep -qF madmonkey) || return 1
+
+source_base "./etc/preinit.d"
+copy "./bin/" "$rootfs/bin/"
+copy "./lib/modules/" "$rootfs/lib/modules/" --delete
+
+if [ "$cf_install" = "y" ] || [ "$cf_memboot" = "y" ]; then
+  if sunxi-flash nandsize >/dev/null; then
+    installBoot2 "./boot/boot.img"
+    return 1
+  fi
+fi
+
+local khmod="$installpath/transfer/kexec-$modname.hmod"
+if [ "$khmod" = "$(pwd)" ]; then
+  echo "boot loop. not supposed to happen, but here we are."
+  return 1
+fi
+save_config
+insertKeyFile "./boot/boot.img"
+rm -rf "$khmod"
+mkdir -p "$khmod"
+copy "./" "$khmod/"
+memboot "./boot/boot.img" "$modname-install"
+return 1

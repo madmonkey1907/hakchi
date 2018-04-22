@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ "$1" = "continue" ]; then
+  if [ "$cf_install" = "y" ] || [ "$cf_update" = "y" ]; then
+    mkdir -p "$modpath/transfer"
+  fi
+  cf_undershell='y' sh "$modpath/init"
+  exec "$0" "signal"
+fi
+
+if [ "$1" = "signal" ]; then
+  echo "jumping to switch_root..."
+  ls /run/*shell.pid | xargs cat | xargs -rn1 kill
+  exit 0
+fi
+
+if [ "$1" = "-i" ] || [ "$1" = "--install" ]; then
+  cf_install='y'
+  cf_update='y'
+fi
+
+"$0" "continue" &
+wait "$!"

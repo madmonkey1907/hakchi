@@ -1,25 +1,30 @@
 // #########################################################################
 
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <memory.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <error.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <bootimg.h>
 #include <include/portable_endian.h>
 #include "crc32.h"
 
 // #########################################################################
 
-static bool disableInfo=false;
+static int disableInfo=0;
 #define error_printf(...) (fprintf(stderr,__VA_ARGS__))
 #define info_printf(...) (disableInfo?0:fprintf(stdout,__VA_ARGS__))
 static size_t kernelSize(const void*data);
+typedef int (*FILEStream)(FILE*in,FILE*out,void*param);
+#define PHY_INFO_MAGIC 0xaa55a5a5
 
 // #########################################################################
 
@@ -126,6 +131,38 @@ int dehex(const char*in,const char*out)
 
 // #########################################################################
 
+int loffset(uint8_t*data)
+{
+    uint32_t*data32=(uint32_t*)data;
+    if(memcmp(data+4,"eGON.BT",7)==0)
+        return 4;
+    if(memcmp(data+4,"uboot",6)==0)
+        return 5;
+    if(le32toh(*data32)==0xaa55a5a5)
+        return 1;
+    return 0;
+}
+
+int coffset(uint8_t*data)
+{
+    uint32_t*data32=(uint32_t*)data;
+    if(memcmp(data+4,"eGON.BT",7)==0)
+        return 3;
+    if(memcmp(data+4,"uboot",6)==0)
+        return 3;
+    if(le32toh(*data32)==0xaa55a5a5)
+        return 2;
+    return 0;
+}
+
+uint32_t stamp_value(uint8_t*data)
+{
+    uint32_t*data32=(uint32_t*)data;
+    if(le32toh(*data32)==0xaa55a5a5)
+        return 0xae15bc34;
+    return 0x5f0a6c39;
+}
+
 int checksum(const char*in,int fix)
 {
     size_t fs=loadFile(in,0);
@@ -134,16 +171,16 @@ int checksum(const char*in,int fix)
         info_printf("input: %s, fs: %.8x\n",in,fs);
         uint8_t data[fs+3];
         fs=loadFile(in,data);
-        uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+        uint32_t*data32=(uint32_t*)data;
 
-        if((fs<32)||((memcmp(data+4,"eGON.BT",7)!=0)&&(memcmp(data+4,"uboot",6)!=0)))
+        if((fs<32)||(loffset(data)==0))
         {
             error_printf("header is not found\n");
             return 1;
         }
 
-        uint32_t&hs=data32[(memcmp(data+4,"uboot",6)==0)?5:4];
-        uint32_t l=le32toh(hs);
+        uint32_t*hs=&data32[loffset(data)];
+        uint32_t l=le32toh(*hs);
         l=(l>0x100)?l:fs;
         if((l>fs)||((l%4)!=0))
         {
@@ -153,30 +190,30 @@ int checksum(const char*in,int fix)
         info_printf("header size: 0x%.8x\n",l);
 
         l/=4;
-        uint32_t c=0x5F0A6C39-le32toh(data32[3])-le32toh(hs)+l*4;
+        uint32_t c=stamp_value(data)-le32toh(data32[coffset(data)])-le32toh(*hs)+l*4;
         for(uint32_t i=0;i<l;++i)
             c+=le32toh(data32[i]);
         l*=4;
-        info_printf("checksum: header=0x%.8x file=0x%.8x\n",le32toh(data32[3]),c);
+        info_printf("checksum: header=0x%.8x file=0x%.8x\n",le32toh(data32[coffset(data)]),c);
 
-        if((c!=le32toh(data32[3]))||(l!=le32toh(hs))||(l!=fs))
+        if((c!=le32toh(data32[coffset(data)]))||(l!=le32toh(*hs))||(l!=fs))
         {
             if(fix!=0)
             {
-                if(c!=le32toh(data32[3]))
+                if(c!=le32toh(data32[coffset(data)]))
                     info_printf("checksum updated\n");
-                if((l!=le32toh(hs))||(l!=fs))
+                if((l!=le32toh(*hs))||(l!=fs))
                     info_printf("length updated\n");
-                data32[3]=htole32(c);
-                hs=htole32(l);
+                data32[coffset(data)]=htole32(c);
+                *hs=htole32(l);
                 saveFile(in,data,l);
                 return 0;
             }
-            if(c!=le32toh(data32[3]))
+            if(c!=le32toh(data32[coffset(data)]))
                 error_printf("checksum check failed\n");
-            if((l!=le32toh(hs))||(l!=fs))
+            if((l!=le32toh(*hs))||(l!=fs))
                 error_printf("wrong length\n");
-            return (c==le32toh(data32[3]))?0:1;
+            return (c==le32toh(data32[coffset(data)]))?0:1;
         }
 
         info_printf("checksum OK\n");
@@ -198,7 +235,7 @@ int split(const char*in)
         fs=loadFile(in,data);
         while(data[fs-1]==0xff)
             --fs;
-        uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+        uint32_t*data32=(uint32_t*)data;
         uint32_t offs=le32toh(data32[6]);
         if((offs==0)||(offs>=fs))
             return 1;
@@ -228,7 +265,7 @@ int join(const char*in0,const char*in1)
         //info_printf("input: %s, fs: %.8x\n",in1,fs1);
         uint8_t data[fs0*2+fs1];
         fs0=loadFile(in0,data);
-        uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+        uint32_t*data32=(uint32_t*)data;
         uint32_t offs=le32toh(data32[6]);
         if((offs!=0)&&(offs!=fs0))
             return 1;
@@ -254,11 +291,11 @@ int hsqs(const char*in0)
     if(fs0)
     {
         info_printf("input: %s, fs: %zu\n",in0,fs0);
-        uint8_t*data=static_cast<uint8_t*>(malloc(fs0));
+        uint8_t*data=(uint8_t*)malloc(fs0);
         if(data)
         {
             fs0=loadFile(in0,data);
-            uint32_t*data32=reinterpret_cast<uint32_t*>(data);
+            uint32_t*data32=(uint32_t*)data;
             if(le32toh(data32[0])==0x73717368)
             {
                 uint32_t bs=0x1000;//le32toh(data32[3]);
@@ -311,7 +348,10 @@ enum
 
 enum
 {
+    nandsize,
+    _w_unused0,
     hakchi_test,
+    nandinfo=hakchi_test,
     phy_write_if,
     phy_read,
     phy_write,
@@ -324,13 +364,15 @@ enum
     read_boot2,
     burn_boot2,
     ramdisk,
-    _w_unused0,
-    cmdline,
     _w_unused1,
+    cmdline,
+    _w_unused2,
     max_ioctl
 };
 
 const unsigned long _iocmd[max_ioctl]={
+    ioctl_test,
+    ioctl_test,
     ioctl_test,
     ioctl_write,
     ioctl_read,
@@ -347,11 +389,52 @@ const unsigned long _iocmd[max_ioctl]={
     ioctl_test,
 };
 
+const unsigned long _iocmd_param[max_ioctl]={
+    0,
+    0,
+    0,
+    2,
+    2,
+    2,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0,
+};
+
 #define sf_str2cmd(x) {if(strcmp((cmdstr),(#x))==0)cmd=(x);}
+
+int verify_test(char*buffer,uint32_t cmd)
+{
+    if(memcmp(buffer,"hakchi",7))
+        return 1;
+    struct hakchi_nandinfo*hni=(struct hakchi_nandinfo*)buffer;
+    int odi=disableInfo;
+    disableInfo=0;
+    if(cmd==nandinfo)
+    {
+        //info_printf("%u\n",hni->size);
+        info_printf("%u ",hni->page_size);
+        info_printf("%u ",hni->pages_per_block);
+        info_printf("%u\n",hni->block_count);
+    }
+    if(cmd==nandsize)
+    {
+        info_printf("%x\n",hni->block_count);
+    }
+    disableInfo=odi;
+    return 0;
+}
 
 int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
 {
-    burn_param_t data;
+    struct burn_param_t data;
     char buffer[sector_size];
     memset(&data,0,sizeof(data));
     data.buffer=buffer;
@@ -364,14 +447,29 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
         error(1,errno,"Cannot open %s: ",file);
         return 1;
     }
+    data.length=sector_size;
+    data.offset=0;
+    const int testok=((ioctl(fd,ioctl_test,&data)<0)||(verify_test(buffer,cmd)))?1:0;
+    if(testok)
+        error_printf("ioctl test failed\n");
+    const unsigned long iocmd=_iocmd[cmd];
+    if((iocmd==ioctl_test)||(testok))
+    {
+        close(fd);
+        return testok;
+    }
     FILE*pf=0;
     int ret=0;
-    const bool dir=(cmd&1);//1 - write
-    const unsigned long iocmd=_iocmd[cmd];
+    const int dir=(cmd&1);//1 - write
     size_t skip=0;
     if(dir)
     {
-        size=size?:size_t(-1);
+        size=size?:((size_t)-1);
+        if(cmd==burn_boot1)
+        {
+            offs=offs?:uboot_base_f;
+            return 1;//not implemented yet
+        }
         if(cmd==burn_boot2)
         {
             offs=offs?:kernel_base_f;
@@ -414,22 +512,22 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     }
     else
     {
-        bool checkHeader=false;
+        int checkHeader=0;
         if(cmd==read_boot0)
         {
-            checkHeader=true;
+            checkHeader=1;
             size=32*1024;
             offs=0;
         }
         if(cmd==read_boot1)
         {
-            checkHeader=true;
+            checkHeader=1;
             size=size?:sector_size;
             offs=offs?:uboot_base_f;
         }
         if((cmd==read_boot2)||(cmd==ramdisk)||(cmd==cmdline))
         {
-            checkHeader=true;
+            checkHeader=1;
             size=size?:sector_size;
             offs=offs?:kernel_base_f;
         }
@@ -447,14 +545,14 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
             }
             if(checkHeader)
             {
-                checkHeader=false;
+                checkHeader=0;
                 if((memcmp(buffer+4,"eGON.BT",7)==0)||(memcmp(buffer+4,"uboot",6)==0))
                 {
-                    uint32_t*data32=reinterpret_cast<uint32_t*>(buffer);
+                    uint32_t*data32=(uint32_t*)buffer;
                     uint32_t l=le32toh(data32[(memcmp(buffer+4,"uboot",6)==0)?5:4]);
                     size=l;
                 }
-                boot_img_hdr*h=reinterpret_cast<boot_img_hdr*>(buffer);
+                boot_img_hdr*h=(boot_img_hdr*)buffer;
                 if(memcmp(h->magic,BOOT_MAGIC,BOOT_MAGIC_SIZE)==0)
                 {
                     size=kernelSize(buffer);
@@ -468,7 +566,7 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                         const size_t adv=pages/sector_size;
                         if(!isatty(fileno(stdout)))
                         {
-                            checkHeader=true;
+                            checkHeader=1;
                         }
                         if(adv>0)
                         {
@@ -516,32 +614,87 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     return ret;
 }
 
-int sunxi_flash(uint32_t cmd,uint32_t offs,uint32_t size,const char*fileName)
+// #########################################################################
+
+struct ioctlParam
 {
-    const bool dir=(cmd&1);//1 - write
-    FILE*hf=0,*f=0;
-    if(fileName)
+    uint32_t cmd;
+    uint32_t offs;
+    uint32_t size;
+};
+
+int ioctlStream(FILE*in,FILE*out,void*param)
+{
+    struct ioctlParam*p=(struct ioctlParam*)param;
+    const int dir=(p->cmd&1);//1 - write
+    return sunxi_flash_ioctl(p->cmd,p->offs,p->size,dir?in:out);
+}
+
+// #########################################################################
+
+int streamFile(const char*inFileName,const char*outFileName,FILEStream func,void*param)
+{
+    FILE*inhf=0,*inf=0;
+    FILE*outhf=0,*outf=0;
+    if(inFileName)
     {
-        f=hf=fopen(fileName,dir?"rb":"wb");
-        if(!f)
+        if(inFileName[0])
         {
-            error_printf("cannot open file: %s\n",fileName);
-            return 1;
+            inf=inhf=fopen(inFileName,"rb");
+            if(!inf)
+            {
+                error_printf("cannot open file: %s\n",inFileName);
+                return 1;
+            }
         }
     }
     else
     {
-        f=dir?stdin:(disableInfo=true,stdout);
-        if(isatty(fileno(f)))
+        inf=stdin;
+        if(isatty(fileno(inf)))
         {
-            error_printf("DO NOT WANT to %s terminal\n",dir?"read from":"write to");
+            error_printf("DO NOT WANT to %s terminal\n","read from");
             return 1;
         }
     }
-    const int ret=sunxi_flash_ioctl(cmd,offs,size,f);
-    if(hf)
-        fclose(hf);
+    if(outFileName)
+    {
+        if(outFileName[0])
+        {
+            outf=outhf=fopen(outFileName,"wb");
+            if(!outf)
+            {
+                error_printf("cannot open file: %s\n",outFileName);
+                if(inhf)fclose(inhf);
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        outf=(disableInfo=1,stdout);
+        if(isatty(fileno(outf)))
+        {
+            error_printf("DO NOT WANT to %s terminal\n","write to");
+            if(inhf)fclose(inhf);
+            return 1;
+        }
+    }
+    const int ret=func(inf,outf,param);
+    if(inhf)fclose(inhf);
+    if(outhf)fclose(outhf);
     return ret;
+}
+
+// #########################################################################
+
+int sunxi_flash(uint32_t cmd,uint32_t offs,uint32_t size,const char*fileName)
+{
+    const int dir=(cmd&1);//1 - write
+    const char*dis="";
+    if(cmd<=hakchi_test)
+        fileName=dis;
+    return streamFile(dir?fileName:dis,dir?dis:fileName,ioctlStream,&((struct ioctlParam){cmd,offs,size}));
 }
 
 // #########################################################################
@@ -549,7 +702,7 @@ int sunxi_flash(uint32_t cmd,uint32_t offs,uint32_t size,const char*fileName)
 static size_t kernelSize(const void*data)
 {
     size_t size=0;
-    const boot_img_hdr*h=reinterpret_cast<const boot_img_hdr*>(data);
+    const boot_img_hdr*h=(const boot_img_hdr*)data;
     if(memcmp(h->magic,BOOT_MAGIC,BOOT_MAGIC_SIZE)==0)
     {
         size_t pages=1;
@@ -568,7 +721,7 @@ int kernel(const char*in0)
     if(fs0)
     {
         info_printf("input: %s, fs: %zu\n",in0,fs0);
-        uint8_t*data=static_cast<uint8_t*>(malloc(fs0));
+        uint8_t*data=(uint8_t*)malloc(fs0);
         if(data)
         {
             fs0=loadFile(in0,data);
@@ -597,11 +750,56 @@ int kernel(const char*in0)
 
 // #########################################################################
 
+int devmemStream(FILE*in,FILE*out,void*param)
+{
+    int ret=1;
+    struct ioctlParam*p=(struct ioctlParam*)param;
+    int fd=open("/dev/mem",(in?O_RDWR:O_RDONLY)|O_SYNC);
+    if(fd>0)
+    {
+        const int pageSize=getpagesize();
+        const uint32_t startPage=p->offs&(~(pageSize-1));
+        const uint32_t size=((p->offs+p->size+pageSize-1)&(~(pageSize-1)))-startPage;
+        const uint32_t offset=p->offs&(pageSize-1);
+        void*mapBase=mmap(0,size,(in?PROT_WRITE:0)|PROT_READ,MAP_SHARED,fd,startPage);
+        if(mapBase==MAP_FAILED)
+        {
+            error_printf("mmap failed\n");
+        }
+        else
+        {
+            void*virtAddr=(char*)mapBase+offset;
+            p->size=(p->size+3)/4;
+            if(out)
+                if(fwrite(virtAddr,4,p->size,out)==p->size)
+                    ret=0;
+            if(in)
+                if(fread(virtAddr,4,p->size,in)==p->size)
+                    ret=0;
+            if(munmap(mapBase,size)<0)
+                error_printf("munmap failed\n");
+        }
+        close(fd);
+    }
+    return ret;
+}
+
+int devmem(uint32_t write,uint32_t offs,uint32_t size,const char*fileName)
+{
+    const char*dis="";
+    return streamFile(write?fileName:dis,write?dis:fileName,devmemStream,&((struct ioctlParam){write,offs,size}));
+}
+
+// #########################################################################
+
 int main(int argc,const char*argv[])
 {
     int ret=0;
-    for(int i=1;i<argc;++i)
+    argv[0]=basename(argv[0]);
+    for(int i=0;i<argc;++i)
     {
+        if(strcmp(argv[i],"sntool")==0)
+            continue;
         if(strcmp(argv[i],"dehex")==0)
         {
             const char*in=(argc>(i+1))?(++i,argv[i]):"capture";
@@ -635,12 +833,14 @@ int main(int argc,const char*argv[])
             const char*in0=(argc>(i+1))?(++i,argv[i]):"kernel.img";
             ret+=kernel(in0);
         }
-        if(strcmp(argv[i],"sunxi_flash")==0)
+        if((strcmp(argv[i],"sunxi_flash")==0)||(strcmp(argv[i],"sunxi-flash")==0))
         {
             const char*cmdstr=(argc>(i+1))?(++i,argv[i]):"0xff";
             uint32_t cmd=0xff;
             uint32_t offs=0;
             uint32_t size=0;
+            sf_str2cmd(nandinfo);
+            sf_str2cmd(nandsize);
             sf_str2cmd(phy_read);
             sf_str2cmd(phy_write);
             sf_str2cmd(phy_write_if);
@@ -654,11 +854,15 @@ int main(int argc,const char*argv[])
             sf_str2cmd(burn_boot2);
             sf_str2cmd(ramdisk);
             sf_str2cmd(cmdline);
-            if(cmd<=phy_write)
+            const uint32_t params=_iocmd_param[cmd];
+            if(params>0)
             {
                 offs=(argc>(i+1))?(++i,strtol(argv[i],0,16)):0;
-                size=(argc>(i+1))?(++i,strtol(argv[i],0,16)):0;
                 offs*=sector_size;
+            }
+            if(params>1)
+            {
+                size=(argc>(i+1))?(++i,strtol(argv[i],0,16)):0;
                 size*=sector_size;
             }
             const char*in0=(argc>(i+1))?(++i,argv[i]):0;
@@ -666,6 +870,20 @@ int main(int argc,const char*argv[])
                 ret+=1;
             else
                 ret+=sunxi_flash(cmd,offs,size,in0);
+        }
+        if((strcmp(argv[i],"devmem")==0)||(strcmp(argv[i],"devmem-write")==0))
+        {
+            const int write=(strcmp(argv[i],"devmem")==0)?0:1;
+            uint32_t offs=(argc>(i+1))?(++i,strtol(argv[i],0,0)):0;
+            uint32_t size=(argc>(i+1))?(++i,strtol(argv[i],0,0)):0;
+            const char*fn0=(argc>(i+1))?(++i,argv[i]):0;
+            ret+=devmem(write,offs,size,fn0);
+        }
+        if(0)
+        {
+            error_printf("unknown command: %s\n",argv[i]);
+            ret=1;
+            break;
         }
     }
     return ret;

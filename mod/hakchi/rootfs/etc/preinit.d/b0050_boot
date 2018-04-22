@@ -1,0 +1,111 @@
+getCmdLine(){
+  dd status=none "if=$1" bs=64 count=8 skip=1 | tr -d '\0' | tr ' ' '\n'
+  echo
+}
+
+getCmdLinePadded(){
+  cat "$1" | xargs
+  dd status=none conv=notrunc "if=/dev/zero" bs=64 count=8
+}
+
+setCmdLine(){
+  getCmdLinePadded "$2" | dd status=none conv=notrunc "of=$1" bs=64 count=8 seek=1
+}
+
+encodeKeyFile(){
+  local keyfile="/key-file"
+  [ -f "$keyfile" ] || keyfile="$rootfs/etc/key-file"
+  [ -f "$keyfile" ] || return 1
+  echo "$modname-key-file=base64:$(base64 "$keyfile")"
+}
+
+insertKeyFile(){
+  local cmdline="$temppath/cmdline"
+  getCmdLine "$1" | grep -Fv "${modname}-" > "$cmdline"
+  encodeKeyFile >> "$cmdline"
+  setCmdLine "$1" "$cmdline"
+  rm -f "$cmdline"
+}
+
+flashBoot2(){
+  local bootimg="$1"
+  [ -f "$bootimg" ] || return 1
+  local offset="$2"
+  [ -z "$offset" ] && offset=30
+  local size="$3"
+  [ -z "$size" ] && size=20
+  local md5i="$(dd status=none bs=128K "if=$bootimg" | md5sum | awk '{print $1}')"
+  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
+  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
+  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
+  local md5f="$(sunxi-flash read_boot2 "$offset" | md5sum | awk '{print $1}')"
+  [ "$md5i" = "$md5f" ] && return 0
+  echo "flash md5 mismatch! $md5i($bootimg) != $md5f(flash+$offset)"
+  return 1
+}
+
+haveBackup2(){
+  [ "$(sunxi-flash phy_read 68 1 | dd status=none bs=7 count=1)" = "ANDROID" ] && return 0
+  return 1
+}
+
+backupBoot2(){
+  haveBackup2 && return 0
+  [ "$(sunxi-flash ramdisk | cpio -t 2>/dev/null | grep -F "$modname" | wc -l)" = "0" ] || return 1
+  local bootimg="$temppath/boot.img"
+  sunxi-flash read_boot2 > "$bootimg" || return 1
+  flashBoot2 "$bootimg" 68 18 || return 1
+  rm -f "$bootimg"
+}
+
+restoreBoot2(){
+  haveBackup2 || return 1
+  local bootimg="$temppath/boot.img"
+  sunxi-flash read_boot2 68 > "$bootimg" || return 1
+  flashBoot2 "$bootimg" || return 1
+  rm -f "$bootimg"
+}
+
+installBoot2(){
+  backupBoot2
+  insertKeyFile "$1"
+  if [ -d "$rootfs/boot" ]; then
+    copy "$1" "$rootfs/boot/"
+  else
+    flashBoot2 "$1"
+  fi
+}
+
+memboot(){
+  local bootimg="$1";shift
+  [ -f "$bootimg" ] || return 1
+  kexec -l -t zImage "$bootimg" "--command-line=$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@") | xargs)" --atags || return 1
+  trap ":" HUP TERM
+  killall -q clovershell
+  uistop
+  sync
+  cd /
+  umount -a -r 2>/dev/null
+  disableUsbDevice
+  kexec -e
+  while :;do sleep 1;:;done
+}
+
+recovery(){
+  local bootimg="$1"
+  [ -f "$bootimg" ] && shift
+  local rshell="$modname-shell"
+  pack_list | grep -qF clovershell && rshell="$modname-clovershell"
+  [ "$#" -gt "0" ] && rshell=""
+  [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
+  bootimg="$temppath/boot.img"
+  sunxi-flash read_boot2 > "$bootimg" || return 1
+  [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
+}
+
+bootBackup2(){
+  haveBackup2 || return 1
+  local bootimg="$temppath/boot.img"
+  sunxi-flash read_boot2 68 > "$bootimg" || return 1
+  memboot "$bootimg"
+}

@@ -8,7 +8,7 @@ if [ -f "$firmware" ]; then
   cryptsetup open /dev/nandb root-crypt --type plain --cipher aes-xts-plain --key-file /key-file
 
   dd if=/dev/zero of=/dev/mapper/root-crypt bs=512 "seek=$(($(stat -c%s "$firmware")/512))"
-  dd "if=$firmware" of=/dev/mapper/root-crypt bs=512
+  dd status=none "if=$firmware" of=/dev/mapper/root-crypt bs=128K
 
   cryptsetup close root-crypt
   cryptsetup open /dev/nandb root-crypt --readonly --type plain --cipher aes-xts-plain --key-file /key-file
@@ -17,14 +17,8 @@ if [ -f "$firmware" ]; then
 fi
 unset firmware
 
-local tmk="$(pwd)/mkfs.txz"
-if [ -f "$tmk"]; then
-  rm -f "/lib"
-  cd / && tar xJf "$tmk"
-  mount_bind "$mountpoint/lib" "/lib"
-  yes | /sbin/mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum /dev/nandc
-  umount "/lib"
+if [ -x "/bin/mke2fs" ]; then
+  yes | mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum /dev/nandc
 fi
-unset tmk
 
 mount_base

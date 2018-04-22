@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ "$1" = "--detached" ]; then
+  shift
+  ${1+"$@"}
+else
+  "$0" --detached ${1+"$@"} &
+  wait $!
+fi

@@ -5,7 +5,7 @@ SOURCES  ?= $(CURDIR)/.
 INCLUDES := $(SOURCES)
 
 CFLAGS   :=
-CFLAGS   := $(CFLAGS) -Wall -Wextra -Os
+CFLAGS   := $(CFLAGS) -Wall -Wextra -Os -s
 CFLAGS   := $(CFLAGS) -I../3rdparty/sunxi-tools -I../3rdparty/mkbootimg
 CFLAGS   := $(CFLAGS) -flto=4 -fwhole-program -fuse-linker-plugin \
   -fdata-sections -ffunction-sections -Wl,--gc-sections
@@ -51,11 +51,8 @@ all: $(OUTPUT) $(ELF)
 $(OUTPUT):
 	$(ECHO)mkdir -p "$@"
 
-$(ELF).elf: $(OBJS)
+$(ELF): $(OBJS)
 	$(ECHO)$(GCC) $(CFLAGS) $(OBJS) $(LDFLAGS) $(LDLIBS) -o "$@"
-
-$(ELF): $(ELF).elf
-	$(ECHO)$(STRIP) --strip-all "$<" -o "$@"
 
 $(ELF).upx: $(ELF)
 	$(ECHO)upx -qq --ultra-brute "$<" -o "$@" -f

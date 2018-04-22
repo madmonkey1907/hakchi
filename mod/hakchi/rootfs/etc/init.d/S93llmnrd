@@ -1,10 +1,13 @@
 #!/bin/sh
-NAME="remote-exec"
+source /etc/preinit
+script_init
+
+NAME="llmnrd"
 DAEMON="/bin/$NAME"
 case "$1" in
   start)
     echo -n "Starting $NAME: "
-    start-stop-daemon -S -q -b -N 10 -x "$DAEMON" && echo "OK" || echo "Failed"
+    start-stop-daemon -S -q -b -N 10 -x "$DAEMON" -- --hostname "$modname" && echo "OK" || echo "Failed"
   ;;
   stop)
     echo -n "Stopping $NAME: "
@@ -18,8 +21,11 @@ case "$1" in
     "$0" stop
     "$0" start
   ;;
+  reload)
+    killall -q -HUP "$NAME"
+  ;;
   *)
-    echo "Usage: $(basename "$0") {start|stop|status|restart}"
+    echo "Usage: $(basename "$0") {start|stop|status|restart|reload}"
     exit 1
   ;;
 esac

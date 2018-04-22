@@ -8,28 +8,35 @@ fi
 infile="$(basename "$inpath").img"
 img="./$infile"
 
-rm -rf "$inpath/initramfs/hakchi"
-rsync -a "$inpath/../mod/" "$inpath/initramfs/"
+mkdir -p "$inpath/initramfs"
+if [ -d "$inpath/../mod" ]; then
+  rsync -ac "$inpath/../mod/" "$inpath/initramfs/" --delete
+fi
+(cd "$inpath/initramfs" && mkdir -p "dev" "proc" "run" "tmp" "sys")
+
 if [ "$2" = "notx" ]; then
   rm -rf "$inpath/initramfs/hakchi/transfer"
-  rm -f "$inpath/initramfs/bin/rsync"
+else
+  echo >/dev/null
 fi
 
-#(cd "$inpath/initramfs";find -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
-mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"
+(cd "$inpath/initramfs/bin" && qemu-arm-static -L ".." "./busybox" --list | xargs -rn1 ln -s "busybox" 2>/dev/null) || true
+
+(cd "$inpath/initramfs";find -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
+#mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"
 
 kernelzImage="$inpath/../data/zImage"
 compress="xz --check=crc32 --lzma2=dict=1MiB"
 if ! [ -f "$kernelzImage" ]; then
   kernelzImage="$inpath/$infile-zImage"
-  compress="lzop --best"
+  [ $(stat -c%s "$kernelzImage") -lt 2220000 ] && compress="lzop"
 fi
 bundled $compress -c "$inpath/initramfs.cpio" > "$inpath/$infile-ramdisk.gz"
 
 mkbootimg \
 --kernel "$kernelzImage" \
 --ramdisk "$inpath/$infile-ramdisk.gz" \
---cmdline "$(cat "$inpath/$infile-cmdline")" \
+--cmdline "$(cat "$inpath/$infile-cmdline" | xargs) hakchi-shell" \
 --board "$(cat "$inpath/$infile-board")" \
 --base "$(cat "$inpath/$infile-base")" \
 --pagesize "$(cat "$inpath/$infile-pagesize")" \

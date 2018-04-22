@@ -8,12 +8,11 @@ transfer_file(){
 }
 
 transfer_default(){
-  rsync -ac \
+  copy "$transferpath/" "$rootfs/" \
   --exclude "/install" \
   --exclude "/transfer" \
   --exclude "/uninstall" \
-  --exclude "*.hmod" \
-  "$transferpath/" "$rootfs/"
+  --exclude "*.hmod"
 }
 
 transfer_path(){
@@ -51,7 +50,7 @@ pack_install(){
     local transferpath="$packFile"
   fi
   transfer_path "$transferpath"
-  if grep -xqF "no-uninstall" "$transferpath/uninstall"; then
+  if [ -f "$transferpath/uninstall" ] && grep -xqF "no-uninstall" "$transferpath/uninstall"; then
     echo "package $packName installed"
     return 0
   fi

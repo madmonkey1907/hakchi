@@ -1,0 +1,52 @@
+f_clovershell(){
+  setSysNode "$CONFIGFS/idVendor" "1f3a"
+  setSysNode "$CONFIGFS/idProduct" "efe8"
+  setSysNode "$CONFIGFS/functions" "clover"
+  setSysNode "$CONFIGFS/enable" "1"
+  clovershell &
+  echo "$!" > "/run/clovershell.pid"
+}
+
+f_shell(){
+  service rndis start
+  service inetd start
+  service lmnrd start
+  grabSquashfsLibs
+}
+
+runshell(){
+  showDefaultImage
+  switchToUsbDevice || return 1
+  local CONFIGFS="/sys/devices/virtual/android_usb/android0"
+  setSysNode "$CONFIGFS/enable" "0"
+  PATH="$modpath/shell:$PATH"
+
+  copy "$modpath/rootfs/bin/$modname" "/bin/$modname"
+  copy "$modpath/rootfs/etc/profile" "/root/.profile"
+  sed -i "s#^$modname showBanner#source /root/.shrc#g" "/root/.profile"
+
+  echo "
+if [ -z \"\$cf_shell\" ]; then
+  export PATH=\"$PATH\"
+  export mountpoint=\"$mountpoint\"
+  export modname=\"$modname\"
+  export modpath=\"$modpath\"
+  source \"$modpath/config\"
+fi
+  " > "/root/.shrc"
+
+  ${1+"$@"}
+
+  tail -f "$modpath/init" 1>/dev/null &
+  local pid="$!"
+  echo "$pid" > "/run/shell.pid"
+  wait "$pid"
+  usleep 200000
+  service inetd stop
+  killall -q sntool
+  killall -q sunxi-flash
+  exit 0
+}
+
+[ "$cf_clovershell" = "y" ] && runshell f_clovershell
+[ "$cf_shell" = "y" ] && runshell f_shell

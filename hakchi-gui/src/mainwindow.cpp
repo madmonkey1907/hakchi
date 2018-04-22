@@ -64,7 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     printf("Knock, knock\n");
 
 #ifndef DEBUG
-//    ui->actionWrite_nand->setVisible(false);
+    ui->actionWrite_nand->setVisible(false);
 #endif
 }
 
@@ -159,7 +159,7 @@ void MainWindow::on_actionDump_nand_triggered()
 void MainWindow::on_actionWrite_nand_triggered()
 {
 // do not use
-//return;
+return;
     if(QMessageBox::warning(this,"nand","sure?",QMessageBox::Yes|QMessageBox::Abort,QMessageBox::Abort)!=QMessageBox::Yes)
         return;
     emit doWork(Worker::writeNandFull);

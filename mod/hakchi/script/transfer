@@ -1,4 +1,4 @@
-showImage "$modpath/rootfs/etc/$modname.fb"
+showDefaultImage
 source "$modpath/script/install"
 
 backup_nandc
@@ -41,9 +41,9 @@ source_parts "$modpath/rootfs/etc/preinit.d/p????_*firmware*"
 # now we can do install/repair
 if [ -f "$preinit" ]; then
   echo "$modname already installed"
-  mod_repair
+  [ "$cf_update" = "y" ] && mod_repair
 else
-  mod_install
+  [ "$cf_install" = "y" ] && mod_install
 fi
 
 [ -f "$transferpath/uninstall" ] && packs_uninstall $(cat "$transferpath/uninstall")

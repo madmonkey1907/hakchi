@@ -1,0 +1,42 @@
+#!/bin/sh
+source /etc/preinit
+script_init
+
+interfaces="/etc/network/interfaces"
+
+start(){
+  if [ "$(usbMode)" != "host" ]; then
+    echo "usbMode: $(usbMode)"
+    exit 1
+  fi
+
+  ifup -a
+  for i in $(ls "$interfaces.d"); do
+    ifup "$i" -i "$interfaces.d/$i" &
+  done
+}
+
+stop(){
+  for i in $(ls -r "$interfaces.d"); do
+    ifdown "$i" -i "$interfaces.d/$i" &
+  done
+  ifdown -a
+}
+
+case "$1" in
+  start)
+    start
+  ;;
+  stop)
+    stop
+  ;;
+  restart)
+    stop
+    sleep 1
+    start
+  ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|restart}"
+    exit 1
+  ;;
+esac

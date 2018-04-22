@@ -22,7 +22,7 @@ if [ -d /etc/profile.d ]; then
   unset i
 fi
 
-if [ -x /usr/bin/resize ] && termpath="`tty`"; then
+if [ -x /bin/resize ] && termpath="`tty`"; then
   # Make sure we are on a serial console (i.e. the device used starts with /dev/tty),
   # otherwise we confuse e.g. the eclipse launcher which tries do use ssh
   case "$termpath" in
@@ -34,4 +34,4 @@ export PATH PS1 OPIEDIR QPEDIR QTDIR EDITOR TERM
 
 umask 022
 
-eval $(resize)
+hakchi showBanner

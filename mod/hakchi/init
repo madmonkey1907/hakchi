@@ -7,17 +7,18 @@ init(){
   export mountpoint="/newroot"
   export temppath="/tmp"
   export bootVersion="1.0.2"
+
   echo "$modname init script version: $bootVersion"
 
-  ln -s "$modpath/rootfs/etc" "/"
-  mkdir -p "$temppath"
-  for dir in lib usr sbin; do
-    [ -e "/$dir" ] || ln -s "$mountpoint/$dir" "/"
+  for dir in usr sbin; do
+    [ -e "/$dir" ] || ln -nsf "$mountpoint/$dir" "/" 2>/dev/null
   done
+  ln -nsf "$modpath/rootfs/etc" "/" 2>/dev/null
   export PATH="/sbin:$modpath/rootfs/bin:/bin:$mountpoint/sbin:/usr/sbin:$mountpoint/bin:/usr/bin"
 
-  source "$modpath/config"
+  [ "$cf_undershell" = "y" ] || source "$modpath/script/config"
   source "$modpath/script/base"
+  [ "$cf_undershell" = "y" ] || source "$modpath/script/shell"
 
   if [ -d "$modpath/transfer" ]; then
     source "$modpath/script/transfer"
@@ -26,11 +27,11 @@ init(){
   fi
 
   if [ -f "$preinit" ]; then
-    export preinit
     PATH="$rootfs/sbin:$rootfs/usr/sbin:$rootfs/bin:$rootfs/usr/bin:$PATH"
     "$rootfs/bin/busybox" sh -c "source "$preinit" && preinit"
   else
     umount_base
+    bootBackup2
   fi
 }
 

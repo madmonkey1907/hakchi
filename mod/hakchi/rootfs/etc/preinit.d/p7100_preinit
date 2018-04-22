@@ -1,3 +1,8 @@
 createVersionFile
+
 overmount "/bin"
 overmount "/etc"
+
+if ! pack_list | grep -qF clovershell; then
+  overmount "/etc/init.d/S92rndis" "/etc/init.d/S90usb-gadget"
+fi

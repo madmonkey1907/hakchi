@@ -1,29 +1,49 @@
+setSysNode(){
+  local node="$1"
+  local value="$2"
+  [ -f "$node" ] || return 1
+  [ "$(cat "$node")" = "$value" ] && return 0
+  echo "$value" > "$node"
+}
+
+disableUsbGadget(){
+  setSysNode "/sys/devices/virtual/android_usb/android0/enable" 0
+}
+
 disableUsbDevice(){
+  disableUsbGadget
   #disable usb
-  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
-  echo 0 > "/sys/devices/sunxi_usb/usb_role"
+  setSysNode "/sys/devices/sunxi_usb/usb_role" 0
 }
 
 switchToUsbDevice(){
-  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
-  disableUsbDevice
+  [ "$(usbMode)" = "device" ] && return 0
+  disableUsbDevice || return 1
   # enable device mode
-  echo 2 > "/sys/devices/sunxi_usb/usb_role"
+  setSysNode "/sys/devices/sunxi_usb/usb_role" 2 || return 1
   # make sure the usb gadgets are disabled
-  echo 0 > "/sys/devices/virtual/android_usb/android0/enable"
+  disableUsbGadget
 }
 
 switchToUsbHost(){
-  [ -f "/sys/devices/sunxi_usb/usb_role" ] || return 1
-  # make sure the usb gadgets are disabled
-  [ -f "/sys/devices/virtual/android_usb/android0/enable" ] && \
-  echo 0 > "/sys/devices/virtual/android_usb/android0/enable"
-  disableUsbDevice
+  [ "$(usbMode)" = "host" ] && return 0
+  disableUsbDevice || return 1
   # enable host mode
-  echo 1 > "/sys/devices/sunxi_usb/usb_role"
+  setSysNode "/sys/devices/sunxi_usb/usb_role" 1
+}
+
+usbMode(){
+  [ -f "/sys/devices/sunxi_usb/usb_role" ] || echo "device"
+  case "$(cat "/sys/devices/sunxi_usb/usb_role")" in
+    0) echo "off";;
+    1) echo "host";;
+    2) echo "device";;
+    *) echo "idk";;
+  esac
 }
 
 getUsbStorageIds(){
+  [ -e "/dev/bus/usb" ] || return 1
   find "/dev/bus/usb/" -type c | while read device
   do
     hexdump -n 1 -s 32 "$device" -C | grep -e '^00000020  08' && echo "$device"
@@ -47,7 +67,6 @@ waitForUsbDevice(){
 }
 
 waitForMmcDevice(){
-  [ -f "/key-file" ] && return 1
   waitForStorageDevice ${1+"$@"}
 }
 
@@ -60,16 +79,17 @@ checkStorageDevice(){
   local saves="$modname/saves"
 
   if ! [ "$cfg_usb_rw" == "y" ]; then
+    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
     mount -o $ro "$blockDevice" "$mountpoint/media" || return 1
   fi
 
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
-    umount "$mountpoint/media" 2>/dev/null
+    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
     mount -o $rw "$blockDevice" "$mountpoint/media" || return 1
   fi
 
   if ! [ -d "$mountpoint/media/$modname" ]; then
-    umount "$mountpoint/media"
+    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
     return 1
   fi
 
@@ -79,7 +99,7 @@ checkStorageDevice(){
   local bootlogo1="$mountpoint/media/$modname/$bootlogo0"
   local bootlogo2="$rootfs/etc/$bootlogo0"
   if [ -f "$bootlogo1" ]; then
-    rsync -ac "$bootlogo1" "$bootlogo2"
+    copy "$bootlogo1" "$bootlogo2"
     showImage "$bootlogo2"
     cfg_boot_logo=''
   else
@@ -91,7 +111,7 @@ checkStorageDevice(){
   local bootsound2="$rootfs/etc/$bootsound0"
   if [ -f "$bootsound1" ]; then
     [ -f "$bootsound2" ] || playSound "$bootsound1"
-    rsync -ac "$bootsound1" "$bootsound2"
+    copy "$bootsound1" "$bootsound2"
   else
     rm -f "$bootsound2"
   fi
@@ -112,6 +132,7 @@ checkExtStorage(){
       checkStorageDevice "$blockDevice$d$p" && return 0
     done
   done
+  mmcUsed || return 1
   [ $timeout -gt 2 ] && timeout=2
   blockDevice="/dev/mmcblk0p"
   waitForMmcDevice "${blockDevice}1"

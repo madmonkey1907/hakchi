@@ -1,0 +1,61 @@
+#!/bin/sh
+source /etc/preinit
+script_init
+
+start(){
+  (ifconfig | grep -qF rndis0) && exit 0
+
+  if [ "$(usbMode)" != "device" ]; then
+    echo "usbMode: $(usbMode)"
+    exit 1
+  fi
+  if pack_list | grep -qF clovershell; then
+    echo "clovershell installed"
+    exit 1
+  fi
+
+  local CONFIGFS="/sys/devices/virtual/android_usb/android0"
+  setSysNode "$CONFIGFS/enable" 0
+  setSysNode "$CONFIGFS/iManufacturer" "$modname"
+  setSysNode "$CONFIGFS/iProduct" classic
+  setSysNode "$CONFIGFS/iSerial" 3730BC73B12E00EC
+  setSysNode "$CONFIGFS/f_rndis/manufacturer" "$modname"
+  setSysNode "$CONFIGFS/f_rndis/vendorID" 057e
+  setSysNode "$CONFIGFS/f_rndis/wceis" 1
+  setSysNode "$CONFIGFS/idVendor" 04e8
+  setSysNode "$CONFIGFS/idProduct" 6863
+  setSysNode "$CONFIGFS/functions" rndis
+  setSysNode "$CONFIGFS/bDeviceClass" 224
+  setSysNode "$CONFIGFS/enable" 1
+
+  ip addr add 10.234.137.10/24 dev rndis0
+  ip addr add 169.254.13.37/16 dev rndis0
+  ip link set rndis0 up
+  ifup lo
+
+  touch "$(cat "/etc/udhcpd.conf" | grep -F "lease_file" | awk '{print $2}')"
+  start-stop-daemon -S -q -x "/bin/udhcpd" -- -S
+}
+
+stop(){
+  start-stop-daemon -K -q -n "udhcpd"
+  killall -q -9 "udhcpd"
+  ip link set rndis0 down
+}
+
+case "$1" in
+  start)
+    start
+  ;;
+  stop)
+    stop
+  ;;
+  restart)
+    stop
+    start
+  ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|restart}"
+    exit 1
+  ;;
+esac

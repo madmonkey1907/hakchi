@@ -1,0 +1,26 @@
+source "$modpath/config"
+
+grepCMDLine(){
+  grep -qF "$@" "/proc/cmdline"
+}
+
+grepCMDLine "$modname-chainload" && cf_chainload='n'
+grepCMDLine "$modname-memboot" && cf_memboot='y'
+grepCMDLine "$modname-clovershell" && cf_clovershell='y'
+grepCMDLine "$modname-shell" && cf_shell='y'
+
+if grepCMDLine "$modname-install"; then
+  cf_install='y'
+  cf_update='y'
+  mkdir -p "$modpath/transfer"
+fi
+
+[ "$cf_clovershell" = "y" ] && cf_memboot='y'
+[ "$cf_shell" = "y" ] && cf_memboot='y'
+[ "$cf_shell" = "y" ] && cf_clovershell='n'
+[ "$cf_memboot" = "y" ] && cf_chainload='n'
+
+rm -f "$modpath/config"
+for cf in $(set | grep -F cf_ | sort); do
+  echo "export $cf" >> "$modpath/config"
+done

@@ -23,6 +23,7 @@ while [ $# -gt 0 ] ; do
       filename="$(ls|head -n1)"
       mv "$filename" "rom.${filename##*.}"
       filename="$tmppath/rom.${filename##*.}"
+      cd - >/dev/null
     fi
     options="-rom $filename"
     shift
@@ -34,5 +35,7 @@ done
 
 args="$options $cfg_snes_extra_args"
 
-[ -f "/bin/clover-canoe-shvc" ] && exec /bin/clover-canoe-shvc $args
-[ -f "/usr/bin/clover-canoe-shvc" ] && exec /usr/bin/clover-canoe-shvc $args
+[ -f "/bin/clover-canoe-shvc" ] && exec "/bin/clover-canoe-shvc" $args
+[ -f "/usr/bin/clover-canoe-shvc" ] && exec "/usr/bin/clover-canoe-shvc" $args
+[ -f "/bin/snes" ] && exec "/bin/snes" $args
+exit 1

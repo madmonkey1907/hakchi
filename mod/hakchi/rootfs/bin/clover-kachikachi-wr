@@ -19,6 +19,7 @@ if [ "$extension" == "7z" ]; then
   filename="$(ls|head -n1)"
   mv "$filename" "rom.${filename##*.}"
   filename="$tmppath/rom.${filename##*.}"
+  cd - >/dev/null
 fi
 if [ "$extension" == "gz" ]; then
   rm -rf "$tmppath"
@@ -26,12 +27,14 @@ if [ "$extension" == "gz" ]; then
   filebase="$(basename "$filebase" ".gz")"
   extension="${filebase##*.}"
   filename="$tmppath/rom.$extension"
-  gunzip -c > "$filename"
+  gunzip -c "$1" > "$filename"
 fi
 shift
 
 args="$filename $@ $cfg_nes_extra_args"
 [ "$cfg_disable_armet" == "y" ] && args="$(echo $args | sed 's/--enable-armet//g')"
 
-[ -f "/bin/clover-kachikachi" ] && exec /bin/clover-kachikachi $args
-[ -f "/usr/bin/clover-kachikachi" ] && exec /usr/bin/clover-kachikachi $args
+[ -f "/bin/clover-kachikachi" ] && exec "/bin/clover-kachikachi" $args
+[ -f "/usr/bin/clover-kachikachi" ] && exec "/usr/bin/clover-kachikachi" $args
+[ -f "/bin/nes" ] && exec "/bin/nes" $args
+exit 1

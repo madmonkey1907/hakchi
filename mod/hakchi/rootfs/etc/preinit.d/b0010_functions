@@ -1,32 +1,59 @@
+showBanner(){
+  echo "
+$modname $hakchiVersion by madmonkey
+
+Special thanks to all of the contributors including: $(shuf /etc/contributors | xargs | sed 's/ /, /g') and anyone else I may have forgotten
+" | fold -s
+}
+
+grabSquashfsLibs(){
+  copy "$mountpoint/lib/" "/lib32/" --ignore-existing  --exclude "modules/"
+  ln -nsf "$rootfs/lib/modules" "/lib32/modules"
+}
+
 squashDevice(){
-  echo "$(mount | grep -F squashfs | head -n1 | awk '{print $1;}')"
+  echo "$(mount | grep -F "$squashfs" | head -n1 | awk '{print $1}')"
+}
+
+umount_if(){
+  if [ -b "$1" ]; then
+    mount | grep -qF "$1" || return 0
+  else
+    mountpoint -q "$1" || return 0
+  fi
+  umount "$1" && return 0
+  umount -rf "$1"
 }
 
 umountSquash(){
-  mountpoint -q "$squashfs" && umount "$squashfs"
+  umount_if "$squashfs"
 }
 
 mountSquash(){
   [ -d "$(dirname "$squashfs")" ] || return 1
-  umountSquash
+  umountSquash || return 1
+  mountpoint -q "$mountpoint" || return 1
   mkdir -p "$squashfs"
-  local sdev="$(squashDevice)"
-  [ -z "$sdev" ] && return 1
-  mount -o ro,noatime "$sdev" "$squashfs"
+#  local sdev="$(squashDevice)"
+#  [ -z "$sdev" ] && return 1
+#  mount -o ro,noatime "$sdev" "$squashfs"
+  mount -o bind,ro "$mountpoint" "$squashfs" || return 1
+  grabSquashfsLibs; return 0
 }
 
 mount_base(){
-  mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var"
-  mkdir -p "$mountpoint/var/lib"
-  mount -o defaults,nosuid,nodev,noatime /dev/nandc "$mountpoint/var/lib"
+  mkdir -p "$mountpoint/var"
+  mountpoint -q "$mountpoint/var" || mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var" || return 1
   mountSquash
+  mkdir -p "$mountpoint/var/lib"
+  mountpoint -q "$mountpoint/var/lib" || mount -o defaults,nosuid,nodev,noatime "/dev/nandc" "$mountpoint/var/lib"
 }
 
 umount_base(){
   sync
   umountSquash
-  umount "$mountpoint/var/lib"
-  umount "$mountpoint/var"
+  umount_if "$mountpoint/var/lib"
+  umount_if "$mountpoint/var"
 }
 
 remove_old(){
@@ -77,7 +104,9 @@ remount_root(){
 
   stopTask decodepng
   stopTask aplay
-  umount "$mountpoint" || (mkdir -p "/var/fuckup" && mount --move "$mountpoint" "/var/fuckup")
+  if mountpoint -q "$mountpoint"; then
+    umount "$mountpoint" || (mkdir -p "/var/fuckup" && mount --move "$mountpoint" "/var/fuckup")
+  fi
 
   local loopfile="/var${1##$mountpoint/var}"
   [ -f "$loopfile" ] || loopfile="/media${1##$mountpoint/media}"
@@ -100,8 +129,11 @@ checkFirmware(){
 }
 
 currentFirmware(){
-  local firmware="$(losetup -a | awk '{print $3'})"
+  local firmware="$(losetup -a | grep -F "$(squashDevice)" | head -n1 | awk '{print $3}')"
   if ! [ -z "$firmware" ]; then
+    local fdir="$(dirname "$firmware")"
+    local fnam="$(basename "$firmware")"
+    firmware="$(find "$fdir" -name "${fnam}*" | head -n1)"
     echo "$firmware"
     return 0
   fi
@@ -140,7 +172,7 @@ loadFirmware(){
   mod_repair_modules
   umountSquash
   remount_root "$firmware"
-  cryptsetup close root-crypt
+  [ -b "/dev/mapper/root-crypt" ] && cryptsetup close root-crypt
   mountSquash
   overmountModules
 }
@@ -148,6 +180,7 @@ loadFirmware(){
 shutdown(){
   echo "The system is going down NOW!"
   sync
+  cd /
   umount -a -r 2>/dev/null
   poweroff -f
   while :;do sleep 1;:;done
@@ -156,29 +189,35 @@ shutdown(){
 reboot(){
   echo "Restarting system."
   sync
+  cd /
   umount -a -r 2>/dev/null
   /bin/reboot -f
   while :;do sleep 1;:;done
 }
 
 early_getty(){
-  cd "$modpath/transfer"
-  preinit="$preinit" getty -ni 115200 ttyS0 -l /bin/sh
+  [ -d "$modpath/transfer" ] && cd "$modpath/transfer" || cd "$temppath"
+  /bin/getty -ni 115200 ttyS0 -l /bin/sh
   cd - 1>/dev/null
 }
 
 copy(){
+  local src="$1";shift
+  local dst="$1";shift
   # we must create target directory
-  local dirname="$(dirname "$2")"
+  local dirname="$(dirname "$dst")"
   mkdir -p "$dirname"
-  rsync -ac "$1" "$2"
+  rsync -ac "$src" "$dst" ${1+"$@"}
 }
 
 copy_mask(){
   # this function is unsafe, avoid spaces in filenames!
-  local dirname="$(dirname "$2")"
+  local src="$1";shift
+  local dst="$1";shift
+  # we must create target directory
+  local dirname="$(dirname "$dst")"
   mkdir -p "$dirname"
-  rsync -ac $1 "$2"
+  rsync -ac $src "$dst" ${1+"$@"}
 }
 
 restore(){
@@ -223,11 +262,12 @@ linkGames(){
   [ -d "$games" ] || games="$1"
   games="${games##$mountpoint}"
   rm -f "$mountpoint/var/games"
-  ln -s "$games" "$mountpoint/var/games"
+  ln -nsf "$games" "$mountpoint/var/games"
   return 0
 }
 
 softwareCheck(){
+  [ -d "$mountpoint/etc/clover" ] || return 1
   sftype="nes"
   sfregion="usa"
   [ "$(cat "$mountpoint/etc/clover/boardtype")" == "dp-shvc" ] && sftype="snes"
@@ -245,10 +285,11 @@ softwareCheck(){
     [ -f "$feck.nes" ] && mv -f "$feck.nes" "$feck"
   fi
 
+  mountpoint -q "$mountpoint/var/lib" || return 0
   mkdir -p "$mountpoint$profilepath/$modname"
 
   rm -f "$mountpoint/var/saves"
-  ln -s "$profilepath" "$mountpoint/var/saves"
+  ln -nsf "$profilepath" "$mountpoint/var/saves"
 }
 
 repair_fonts(){
@@ -271,16 +312,16 @@ checkPath(){
 }
 
 findGameSyncStorage(){
-  checkPath "$mountpoint/media/hakchi/games" && return 0
+  checkPath "$mountpoint/media/$modname/games" && return 0
   mkdir -p "$installpath/games"
   checkPath "$installpath/games" && return 0
   return 1
 }
 
 findGameStorage(){
-  checkGamepath "$mountpoint/media/hakchi/games/$sftype-$sfregion" && return 0
-  checkGamepath "$mountpoint/media/hakchi/games/$sftype" && return 0
-  checkGamepath "$mountpoint/media/hakchi/games" && return 0
+  checkGamepath "$mountpoint/media/$modname/games/$sftype-$sfregion" && return 0
+  checkGamepath "$mountpoint/media/$modname/games/$sftype" && return 0
+  checkGamepath "$mountpoint/media/$modname/games" && return 0
 
   checkGamepath "$installpath/games/$sftype-$sfregion" && return 0
   checkGamepath "$installpath/games/$sftype" && return 0
@@ -375,6 +416,14 @@ showImage(){
   return 0
 }
 
+showDefaultImage(){
+  showImage "$modpath/rootfs/etc/$modname.png"
+}
+
+blank(){
+  dd status=none if=/dev/zero of=/dev/fb0 bs=$((1280*720)) count=$((4*2))
+}
+
 playSound(){
   local wavfile="$(eval echo "$1")"
   [ -f "$wavfile" ] || wavfile="$rootfs$1"
@@ -391,7 +440,7 @@ hwmon(){
 
 usedBlockSpace(){
   local path="$1"
-  [ -e "$path" ] || path="$rootfs"
+  [ ! -e "$path" ] && echo '0' && return 1
   local line="$(df -k "$path" | tail -n1)"
   local used="$(echo "$line" | awk '{print $3}')"
   local available="$(echo "$line" | awk '{print $4}')"
@@ -401,33 +450,96 @@ usedBlockSpace(){
 
 freeBlockSpace(){
   local path="$1"
-  [ -e "$path" ] || path="$rootfs"
+  [ ! -e "$path" ] && echo '0' && return 1
   df -k "$path" | tail -n1 | awk '{print $4}'
 }
 
 usedSpace(){
 # Warning: SLOW
   local path="$1"
-  [ -e "$path" ] || path="$rootfs"
+  [ ! -e "$path" ] && echo '0' && return 1
   du -ksx "$path" | awk '{print $1}'
 }
 
-usedBy(){
+freeSpace(){
+  freeBlockSpace ${1+"$@"}
+}
+
+getPath(){
   case "$1" in
-    games)
-      usedSpace "$(findGameSyncStorage)"
+    games*)
+      echo "$(findGameSyncStorage)${1#games}"
       ;;
     saves)
-      usedSpace "$profilepath"
+      echo "$profilepath"
       ;;
     mods)
-      usedSpace "$rootfs"
+      echo "$rootfs"
       ;;
     firmware)
-      usedSpace "$firmwarepath"
+      echo "$firmwarepath"
       ;;
     *)
-      echo "Usage: usedBy {games|saves|mods|firmware}"
-      return 1
+      echo "Usage: $0 {games*|saves|mods|firmware}" 1>&2
+      echo "$rootfs"; return 1
   esac
+  return 0
+}
+
+usedBy(){
+  if local tpath="$(getPath "$1")"; then
+    usedSpace "$tpath"
+  else
+    echo '0'; return 1
+  fi
+}
+
+freeFor(){
+  if local tpath="$(getPath "$1")"; then
+    case "$1" in
+      games*)
+        freeSpace "$(getPath games)"
+        ;;
+      *)
+        freeSpace "$tpath"
+    esac
+  else
+    echo '0'; return 1
+  fi
+}
+
+totalFor(){
+  echo "$(($(freeFor "$1")+$(usedBy "$1")))"
+}
+
+getScript(){
+  sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex ${1+"$@"} 2>/dev/null
+}
+
+setScript(){
+  sunxi-fexc -q -I fex -O bin ${1+"$@"} 2>/dev/null | sntool devmem-write 0x43000000
+}
+
+hwid(){
+  sntool devmem 0x01c23800 32 | hexdump -e '1/4 "%.8x "' -n16 | xargs
+}
+
+mmcUsed(){
+  getScript | grep -qF 'sdc_used = 1'
+}
+
+createVersionFile(){
+  [ -d "$mountpoint/var" ] || return 1
+  local vfile="$mountpoint/var/version"
+  local kernelVersion="$(uname -r)"
+  [ -z "$bootVersion" ] && local bootVersion="v1.0.0"
+  echo "# $(uname -a)" > "$vfile"
+  set | grep -F Version | sort >> "$vfile"
+}
+
+loadVersionFile(){
+  [ -d "$mountpoint/var" ] || return 1
+  local vfile="$mountpoint/var/version"
+  [ -f "$vfile" ] || return 1
+  source "$vfile"
 }

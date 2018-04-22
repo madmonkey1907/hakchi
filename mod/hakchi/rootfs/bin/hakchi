@@ -2,6 +2,8 @@
 source /etc/preinit
 script_init
 
+trap ":" HUP
+
 hakchi(){
   [ "$1" == "hakchi" ] && shift
   case "$1" in

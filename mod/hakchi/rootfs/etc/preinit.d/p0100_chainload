@@ -1,0 +1,3 @@
+if [ -f "$rootfs/boot/boot.img" ] && [ "$cf_chainload" = "y" ]; then
+  memboot "$rootfs/boot/boot.img" "$modname-chainload"
+fi

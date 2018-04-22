@@ -1,20 +1,23 @@
 #!/bin/sh
 
-cd /bin
-busybox --list | busybox xargs -n1 busybox ln -s "busybox" 2>/dev/null
+#cd /bin
+#busybox --list | busybox xargs -n1 busybox ln -ns "busybox" 2>/dev/null
 cd /
 
 # devtmpfs does not get automounted for initramfs
-mkdir -p /dev /proc /sys
+#mkdir -p /dev /proc /sys
 mount -t devtmpfs devtmpfs /dev
 exec 0</dev/console
 exec 1>/dev/console
 exec 2>/dev/console
 mount -t proc proc /proc
 mount -t sysfs sys /sys
+mkdir -p /dev/pts /dev/shm
+mount -o defaults,gid=5,mode=620 -t devpts devpts /dev/pts
+mount -o mode=077 -t tmpfs tmpfs /dev/shm
 
 keyfile="/key-file"
-for i in $(cat /proc/cmdline); do
+for i in $(cat "/proc/cmdline"); do
   if [ "$i" = "ro" ]; then
     READONLY="y"
   elif [ "${i#root=}" != "$i" ]; then
@@ -25,20 +28,29 @@ for i in $(cat /proc/cmdline); do
     echo "${i#hakchi-key-file=base64:}" | base64 -d >"$keyfile"
   fi
 done
-[ -f "$keyfile" ] || sntool sunxi_flash ramdisk | cpio -iu "$(basename "$keyfile")" 2>/dev/null
+
+if ! [ -f "$keyfile" ]; then
+  kfb64="$(sunxi-flash cmdline | sed -ne 's/.*hakchi-key-file=base64:\([^ ]*\).*/\1/p')" && ! [ -z "$kfb64" ] && echo "$kfb64" | base64 -d >"$keyfile"
+  unset kfb64
+  [ -f "$keyfile" ] || sunxi-flash ramdisk 68 | cpio -iu "$(basename "$keyfile")" 2>/dev/null
+  [ -f "$keyfile" ] || sunxi-flash ramdisk | cpio -iu "$(basename "$keyfile")" 2>/dev/null
+  if ! [ -f "$keyfile" ]; then
+    echo nandc
+  fi
+fi
 
 MOUNT_OPTS="noatime"
 [ "${READONLY}" = "y" ] && MOUNT_OPTS="ro,${MOUNT_OPTS}"
 
 if [ "${DECRYPT}" = "y" ]; then
   [ "${READONLY}" = "y" ] && READONLY="--readonly"
-  cryptsetup open "${ROOTFS}" root-crypt "${READONLY}" --type plain --cipher aes-xts-plain --key-file "$keyfile"
+  [ -f "$keyfile" ] && cryptsetup open "${ROOTFS}" root-crypt "${READONLY}" --type plain --cipher aes-xts-plain --key-file "$keyfile"
   ROOTFS="/dev/mapper/root-crypt"
 fi
 
 mountpoint="/newroot"
 mkdir -p "$mountpoint"
-mount -o "${MOUNT_OPTS}" "${ROOTFS}" "$mountpoint"
+[ -b "${ROOTFS}" ] && mount -o "${MOUNT_OPTS}" "${ROOTFS}" "$mountpoint"
 
 [ -f "/hakchi/init" ] && sh "/hakchi/init"
 

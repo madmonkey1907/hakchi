@@ -1,0 +1,5 @@
+#!/bin/sh
+name="$1";shift
+for s in $(find "/etc/init.d/" -type f -name "*$name*" | sort); do
+  "$s" ${1+"$@"}
+done

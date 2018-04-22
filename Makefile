@@ -58,5 +58,5 @@ build/Makefile: hakchi-gui/hakchi-gui.pro
 build/macdylibbundler: 3rdparty/macdylibbundler/*
 	@$(MAKE) -C $(<D)
 
-bin/sntool: sntool/sntool.cpp
-	@$(CROSS_COMPILE)g++ -I3rdparty/sunxi-tools -I3rdparty/mkbootimg -std=gnu++11 -Wall -Wextra $< -o $@
+bin/sntool: sntool/*.c*
+	@$(MAKE) -C $(<D) && cp $(<D)/$(<D) $@
