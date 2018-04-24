@@ -44,16 +44,29 @@ flashBoot2(){
   return 1
 }
 
+isOriginalBoot2(){
+  [ "$(sunxi-flash ramdisk | cpio -t 2>/dev/null | grep -F "$modname" | wc -l)" = "0" ] && return 0
+  return 1
+}
+
 haveBackup2(){
   [ "$(sunxi-flash phy_read 68 1 | dd status=none bs=7 count=1)" = "ANDROID" ] && return 0
   return 1
 }
 
+readBoot2(){
+  sunxi-flash read_boot2
+}
+
+readBackup2(){
+  sunxi-flash read_boot2 68
+}
+
 backupBoot2(){
   haveBackup2 && return 0
-  [ "$(sunxi-flash ramdisk | cpio -t 2>/dev/null | grep -F "$modname" | wc -l)" = "0" ] || return 1
+  isOriginalBoot2 || return 1
   local bootimg="$temppath/boot.img"
-  sunxi-flash read_boot2 > "$bootimg" || return 1
+  readBoot2 > "$bootimg" || return 1
   flashBoot2 "$bootimg" 68 18 || return 1
   rm -f "$bootimg"
 }
@@ -61,7 +74,7 @@ backupBoot2(){
 restoreBoot2(){
   haveBackup2 || return 1
   local bootimg="$temppath/boot.img"
-  sunxi-flash read_boot2 68 > "$bootimg" || return 1
+  readBackup2 > "$bootimg" || return 1
   flashBoot2 "$bootimg" || return 1
   rm -f "$bootimg"
 }
@@ -99,13 +112,22 @@ recovery(){
   [ "$#" -gt "0" ] && rshell=""
   [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
   bootimg="$temppath/boot.img"
-  sunxi-flash read_boot2 > "$bootimg" || return 1
+  readBoot2 > "$bootimg" || return 1
   [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
 }
 
 bootBackup2(){
   haveBackup2 || return 1
   local bootimg="$temppath/boot.img"
-  sunxi-flash read_boot2 68 > "$bootimg" || return 1
+  readBackup2 > "$bootimg" || return 1
   memboot "$bootimg"
+}
+
+getBackup2(){
+  if haveBackup2; then
+    readBackup2
+  else
+    isOriginalBoot2 || return 1
+    readBoot2
+  fi
 }
