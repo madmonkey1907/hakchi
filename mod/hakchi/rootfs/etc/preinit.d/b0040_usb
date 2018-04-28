@@ -1,3 +1,5 @@
+#!/bin/sh
+
 setSysNode(){
   local node="$1"
   local value="$2"
@@ -79,17 +81,18 @@ checkStorageDevice(){
   local saves="$modname/saves"
 
   if ! [ "$cfg_usb_rw" == "y" ]; then
-    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
+    umount_if "$mountpoint/media"
     mount -o $ro "$blockDevice" "$mountpoint/media" || return 1
   fi
 
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
-    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
+    umount_if "$mountpoint/media"
     mount -o $rw "$blockDevice" "$mountpoint/media" || return 1
+    copy "$mountpoint/var/version" "$mountpoint/media/$modname/version"
   fi
 
   if ! [ -d "$mountpoint/media/$modname" ]; then
-    mountpoint -q "$mountpoint/media" && umount "$mountpoint/media"
+    umount_if "$mountpoint/media"
     return 1
   fi
 

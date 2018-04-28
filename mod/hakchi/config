@@ -1,3 +1,5 @@
+#!/bin/sh
+
 export cf_backup_dummy='n'
 export cf_backup='n'
 export cf_backup_nandc='n'

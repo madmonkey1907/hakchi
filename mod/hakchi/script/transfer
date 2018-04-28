@@ -1,3 +1,5 @@
+#!/bin/sh
+
 showDefaultImage
 source "$modpath/script/install"
 
@@ -40,8 +42,7 @@ source_parts "$modpath/rootfs/etc/preinit.d/p????_*firmware*"
 
 # now we can do install/repair
 if [ -f "$preinit" ]; then
-  echo "$modname already installed"
-  [ "$cf_update" = "y" ] && mod_repair
+  [ "$cf_update" = "y" ] && echo "updating $modname..." && mod_repair
 else
   [ "$cf_install" = "y" ] && mod_install
 fi
@@ -69,5 +70,8 @@ echo
 
 save_config
 [ "$cf_shutdown" == "y" ] && shutdown
-[ "$cf_shutdown" == "r" ] && reboot
+[ "$cf_shutdown" == "r" ] && reboot_kexec
+if [ ! -d "$mountpoint/lib/modules/$(uname -r)" ] && [ ! -d "$rootfs/lib/modules/$(uname -r)" ]; then
+  reboot_kexec
+fi
 echo

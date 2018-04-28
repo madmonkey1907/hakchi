@@ -1,3 +1,5 @@
+#!/bin/sh
+
 transfer_file(){
   [ -f "$1" ] || return 0
   dos2unix -u "$1"
@@ -18,13 +20,14 @@ transfer_default(){
 transfer_path(){
   local transferpath="$1"
   chown -R 0:0 "$transferpath/"
+  find "$transferpath/" -maxdepth 1 -type f -iname "readme" -delete
   find "$transferpath/" -maxdepth 1 -type f -iname "readme.*" -delete
   find "$transferpath/" -maxdepth 1 -type f -iname "*.txt" -delete
   find "$transferpath/" -maxdepth 1 -type f -iname "*.md" -delete
   local docopy=y
   cd "$transferpath"
   for dir in bin sbin usr/bin usr/sbin etc/init.d; do
-    [ -d "./$dir" ] && chmod 755 ./$dir/*
+    [ -d "./$dir" ] && chmod 755 ./$dir/* 2>/dev/null
   done
   [ -d "./etc/preinit.d" ] && chmod 644 ./etc/preinit.d/*
   transfer_file "$transferpath/install" || docopy=n
@@ -113,5 +116,31 @@ packs_install(){
 packs_uninstall(){
   for i in $@; do
     pack_uninstall "$i"
+  done
+}
+
+hmod(){
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      list)
+        pack_list || return 1
+      ;;
+      install)
+      ;;
+      uninstall)
+        shift
+        packs_uninstall ${1+"$@"}
+        return $?
+      ;;
+      *.hmod)
+        pack_install "$1" || return 1
+      ;;
+      *)
+        [ -e "$1" ] || pack_uninstall "$1"
+        [ -f "$1" ] && pack_install "$1"
+        [ -d "$1" ] && packs_install "$1"
+      ;;
+    esac
+    shift
   done
 }

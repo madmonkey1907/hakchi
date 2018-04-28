@@ -1,9 +1,10 @@
+#!/bin/sh
 # /etc/profile: system-wide .profile file for the Bourne shell (sh(1))
 # and Bourne compatible shells (bash(1), ksh(1), ash(1), ...).
 
 PATH="/usr/local/bin:/usr/bin:/bin"
 EDITOR="vi"			# needed for packages like cron, git-commit
-test -z "$TERM" && TERM="vt100"	# Basic terminal capab. For screen etc.
+test -z "$TERM" && TERM="linux"	# Basic terminal capab. For screen etc.
 
 if [ "$HOME" = "/root" ]; then
    PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin

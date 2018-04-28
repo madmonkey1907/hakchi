@@ -1,3 +1,5 @@
+#!/bin/sh
+
 showBanner(){
   echo "
 $modname $hakchiVersion by madmonkey
@@ -150,6 +152,7 @@ overmountModules(){
       overmount "/lib/modules"
     else
       echo "no modules for loaded kernel $(uname -r)"
+      [ -d "$transferpath" ] || bootBackup2
     fi
   fi
 }
@@ -517,7 +520,7 @@ getScript(){
 }
 
 setScript(){
-  sunxi-fexc -q -I fex -O bin ${1+"$@"} 2>/dev/null | sntool devmem-write 0x43000000
+  sunxi-fexc -q -I fex -O bin ${1+"$@"} 2>/dev/null | sntool devmem-write 0x43000000 $((128*1024))
 }
 
 hwid(){
@@ -528,18 +531,32 @@ mmcUsed(){
   getScript | grep -qF 'sdc_used = 1'
 }
 
+versionData(){
+  local kernelVersion="$(uname -r)"
+  [ -z "$bootVersion" ] && local bootVersion="v1.0.0"
+  echo "# $(uname -a)"
+  set | grep -F "Version" | sort
+}
+
 createVersionFile(){
   [ -d "$mountpoint/var" ] || return 1
   local vfile="$mountpoint/var/version"
-  local kernelVersion="$(uname -r)"
-  [ -z "$bootVersion" ] && local bootVersion="v1.0.0"
-  echo "# $(uname -a)" > "$vfile"
-  set | grep -F Version | sort >> "$vfile"
+  versionData > "$vfile"
 }
 
 loadVersionFile(){
-  [ -d "$mountpoint/var" ] || return 1
   local vfile="$mountpoint/var/version"
   [ -f "$vfile" ] || return 1
   source "$vfile"
+}
+
+ifaceUp(){
+  ifconfig | grep -qF "$1" && return 0
+  return 1
+}
+
+ifaceDown(){
+  ifconfig | grep -qF "$1" && return 1
+  ifconfig -a | grep -qF "$1" || return 1
+  return 0
 }

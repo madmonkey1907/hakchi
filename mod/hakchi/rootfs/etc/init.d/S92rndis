@@ -3,13 +3,13 @@ source /etc/preinit
 script_init
 
 start(){
-  (ifconfig | grep -qF rndis0) && exit 0
+  ifaceUp rndis0 && exit 0
 
   if [ "$(usbMode)" != "device" ]; then
     echo "usbMode: $(usbMode)"
     exit 1
   fi
-  if pack_list | grep -qF clovershell; then
+  if clovershellActive; then
     echo "clovershell installed"
     exit 1
   fi
@@ -28,19 +28,21 @@ start(){
   setSysNode "$CONFIGFS/bDeviceClass" 224
   setSysNode "$CONFIGFS/enable" 1
 
-  ip addr add 10.234.137.10/24 dev rndis0
+  #ip addr add 10.234.137.10/24 dev rndis0
   ip addr add 169.254.13.37/16 dev rndis0
   ip link set rndis0 up
-  ifup lo
+  if ifaceDown lo; then
+    [ -f "/etc/network/interfaces" ] && ifup lo || ip link set lo up
+  fi
 
-  touch "$(cat "/etc/udhcpd.conf" | grep -F "lease_file" | awk '{print $2}')"
-  start-stop-daemon -S -q -x "/bin/udhcpd" -- -S
+  #touch "$(cat "/etc/udhcpd.conf" | grep -F "lease_file" | awk '{print $2}')"
+  #start-stop-daemon -S -q -x "/bin/udhcpd" -- -S
 }
 
 stop(){
   start-stop-daemon -K -q -n "udhcpd"
   killall -q -9 "udhcpd"
-  ip link set rndis0 down
+  ifaceUp rndis0 && ip link set rndis0 down
 }
 
 case "$1" in

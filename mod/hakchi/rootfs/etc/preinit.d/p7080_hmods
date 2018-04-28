@@ -1,3 +1,5 @@
+#!/bin/sh
+
 local transferpath="$installpath/transfer"
 [ -d "$mountpoint/media/$modname/transfer" ] && transferpath="$mountpoint/media/$modname/transfer"
 
@@ -25,6 +27,6 @@ if [ -d "$transferpath" ]; then
   cd /
   rm -rf "$transferpath"
   save_config
-  reboot
+  reboot_kexec
 fi
 unset transferpath

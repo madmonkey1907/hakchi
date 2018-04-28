@@ -17,6 +17,7 @@ eval "$(grep -F "hakchiVersion=" "mod/hakchi/rootfs/etc/preinit.d/b0000_defines"
 kernelVersion="$(ls "kernel-hmod/lib/modules")"
 set | grep -F "Version" | sort > "kernel-hmod/var/version"
 
+rm -f hakchi-v*.hmod
 makepack "kernel-hmod/"
 mv "kernel-hmod.hmod.tgz" "hakchi-$hakchiVersion.hmod"
 rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"

@@ -16,6 +16,7 @@
 #include <bootimg.h>
 #include <include/portable_endian.h>
 #include "crc32.h"
+#include "sha.h"
 
 // #########################################################################
 
@@ -131,6 +132,136 @@ int dehex(const char*in,const char*out)
 
 // #########################################################################
 
+static int isKernel(const void*data)
+{
+    const boot_img_hdr*h=(const boot_img_hdr*)data;
+    return (memcmp(h->magic,BOOT_MAGIC,BOOT_MAGIC_SIZE)==0)?1:0;
+}
+
+static size_t kernelSize(const void*data)
+{
+    size_t size=0;
+    if(isKernel(data))
+    {
+        const boot_img_hdr*h=(const boot_img_hdr*)data;
+        size_t pages=1;
+        pages+=(h->kernel_size+h->page_size-1)/h->page_size;
+        pages+=(h->ramdisk_size+h->page_size-1)/h->page_size;
+        pages+=(h->second_size+h->page_size-1)/h->page_size;
+        pages+=(h->dt_size+h->page_size-1)/h->page_size;
+        size=pages*h->page_size;
+    }
+    return size;
+}
+
+// #########################################################################
+
+struct chunk
+{
+    uint32_t offset;
+    uint32_t size;
+    uint32_t hsize;
+};
+
+struct bootimghash
+{
+    uint8_t id[2][SHA_DIGEST_SIZE];
+    struct chunk c[5];
+    uint32_t i;
+    uint32_t match;
+    SHA_CTX ctx;
+};
+
+void bcinit(struct bootimghash*b)
+{
+    memset(b,0,sizeof(*b));
+}
+
+void bcupdate(struct bootimghash*b,const void*data,uint32_t size)
+{
+    if(size==0)
+        return;
+
+    if(b->i==0)
+    {
+        bcinit(b);
+        if(!isKernel(data))
+            return;
+        SHA_init(&b->ctx);
+        const boot_img_hdr*h=(const boot_img_hdr*)data;
+        memcpy(b->id[0],h->id,SHA_DIGEST_SIZE);
+        size_t page=1;
+        b->c[1].offset=page*h->page_size;
+        b->c[1].size=h->kernel_size;
+        b->c[1].hsize=b->c[1].size;
+        page+=(b->c[1].size+h->page_size-1)/h->page_size;
+        b->c[2].offset=page*h->page_size;
+        b->c[2].size=h->ramdisk_size;
+        b->c[2].hsize=b->c[2].size;
+        page+=(b->c[2].size+h->page_size-1)/h->page_size;
+        b->c[3].offset=page*h->page_size;
+        b->c[3].size=h->second_size;
+        b->c[3].hsize=b->c[3].size;
+        page+=(b->c[3].size+h->page_size-1)/h->page_size;
+        b->c[4].offset=page*h->page_size;
+        b->c[4].size=h->dt_size;
+        b->c[4].hsize=b->c[4].size;
+        page+=(b->c[4].size+h->page_size-1)/h->page_size;
+        b->c[0].size=page*h->page_size;
+        b->i=1;
+    }
+
+    if(b->c[0].size==0)
+        return;
+
+    if(b->c[b->i].offset<b->c[0].offset)
+    {
+        error_printf("missed data chunk at 0x%x\n",b->c[b->i].offset);
+        b->c[0].size=0;
+    }
+
+    const uint8_t*d=(const uint8_t*)data;
+    while((size>0)&&(b->i<5))
+    {
+        if(b->c[b->i].size==0)
+        {
+            if((b->i<4)&&(b->c[b->i].hsize==0))
+                SHA_update(&b->ctx,&b->c[b->i].hsize,4);
+            ++b->i;
+            continue;
+        }
+        uint32_t o=b->c[b->i].offset-b->c[0].offset;
+        uint32_t s=size;
+        if(o<s)
+        {
+            s-=o;
+            s=(s<b->c[b->i].size)?s:b->c[b->i].size;
+            SHA_update(&b->ctx,d+o,s);
+            b->c[b->i].offset+=s;
+            b->c[b->i].size-=s;
+            if(b->c[b->i].size==0)
+            {
+                SHA_update(&b->ctx,&b->c[b->i].hsize,4);
+                b->c[b->i].size=0;
+            }
+        }
+        b->c[0].offset+=s;
+        size-=s;
+        d+=s;
+    }
+
+    if(b->i==5)
+    {
+        const uint8_t*sha=SHA_final(&b->ctx);
+        memcpy(b->id[1],sha,SHA_DIGEST_SIZE);
+        if(memcmp(b->id[0],b->id[1],SHA_DIGEST_SIZE)==0)
+            b->match=1;
+        b->c[0].size=0;
+    }
+}
+
+// #########################################################################
+
 int loffset(uint8_t*data)
 {
     uint32_t*data32=(uint32_t*)data;
@@ -172,6 +303,15 @@ int checksum(const char*in,int fix)
         uint8_t data[fs+3];
         fs=loadFile(in,data);
         uint32_t*data32=(uint32_t*)data;
+
+        if(isKernel(data))
+        {
+            struct bootimghash b;
+            b.i=0;
+            bcupdate(&b,data,fs);
+            info_printf("checksum %s\n",b.match?"OK":"failed");
+            return b.match?0:1;
+        }
 
         if((fs<32)||(loffset(data)==0))
         {
@@ -315,12 +455,35 @@ int hsqs(const char*in0)
 
 // #########################################################################
 
+#pragma pack(push,1)
+
+struct burn_param_b
+{
+    void*buffer;
+    uint32_t length;
+};
+
 struct burn_param_t
 {
     void*buffer;
-    long length;
-    long offset;
-    long unused;
+    uint32_t length;
+    uint32_t offset;
+    union
+    {
+        uint32_t flags;
+        struct
+        {
+            uint32_t raw:2;
+            uint32_t getoob:1;
+            uint32_t unused:29;
+        } in;
+        struct
+        {
+            uint32_t unused;
+        } out;
+    };
+    struct burn_param_b oob;
+    uint32_t badblocks;
 };
 
 struct hakchi_nandinfo
@@ -331,6 +494,8 @@ struct hakchi_nandinfo
     uint32_t pages_per_block;
     uint32_t block_count;
 };
+
+#pragma pack(pop)
 
 enum
 {
@@ -345,6 +510,7 @@ enum
 #define sector_size 0x20000u
 #define uboot_base_f 0x100000u
 #define kernel_base_f (sector_size*0x30u)
+#define boot_area (sector_size*0x80u)
 
 enum
 {
@@ -352,9 +518,11 @@ enum
     _w_unused0,
     hakchi_test,
     nandinfo=hakchi_test,
-    phy_write_if,
+    phy_write_force,
     phy_read,
     phy_write,
+    log_read,
+    log_write,
     read_boot0,
     burn_boot0,
     read_boot1,
@@ -377,10 +545,12 @@ const unsigned long _iocmd[max_ioctl]={
     ioctl_write,
     ioctl_read,
     ioctl_write,
+    ioctl_read,
+    ioctl_write,
     ioctl_read_boot0,
     ioctl_burn_boot0,
     ioctl_read,
-    ioctl_burn_boot1,
+    ioctl_write,//ioctl_burn_boot1,
     ioctl_read,
     ioctl_write,
     ioctl_read,
@@ -393,6 +563,8 @@ const unsigned long _iocmd_param[max_ioctl]={
     0,
     0,
     0,
+    2,
+    2,
     2,
     2,
     2,
@@ -432,6 +604,17 @@ int verify_test(char*buffer,uint32_t cmd)
     return 0;
 }
 
+int isRaw(uint32_t cmd)
+{
+    if(cmd==phy_read)
+        return 1;
+    if(cmd==phy_write)
+        return 1;
+    if(cmd==phy_write_force)
+        return 1;
+    return 0;
+}
+
 int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
 {
     struct burn_param_t data;
@@ -461,36 +644,66 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     FILE*pf=0;
     int ret=0;
     const int dir=(cmd&1);//1 - write
+    const int raw=isRaw(cmd);
+    const int forced=(cmd==phy_write_force)?1:0;
     size_t skip=0;
+    struct bootimghash b;
+    b.i=0;
+    int sectorsWritten=0;
     if(dir)
     {
         size=size?:((size_t)-1);
         if(cmd==burn_boot1)
         {
             offs=offs?:uboot_base_f;
-            return 1;//not implemented yet
         }
         if(cmd==burn_boot2)
         {
             offs=offs?:kernel_base_f;
         }
+        int skipread=0;
+        size_t part=0;
         while((ret==0)&&(size>0)&&(!feof(f)))
         {
+            if(!raw)
+            {
+                if(offs>=boot_area)
+                {
+                    error_printf("refusing to write beyond boot area at block %x\n",offs/sector_size);
+                    ret=1;
+                    break;
+                }
+            }
             uint32_t fcrc=0,crc=1;
-            if(cmd==phy_write_if)
+            if((!forced)&&(!skipread))
             {
                 data.length=sector_size;
                 data.offset=offs;
-                if(ioctl(fd,ioctl_read,&data)>=0)
+                data.flags=0;
+                data.in.raw=1;
+                if(ioctl(fd,ioctl_read,&data)<0)
                 {
-                    fcrc=crc32(buffer,sector_size);
+                    error_printf("nand read failed at block %x\n",offs/sector_size);
+                }
+                else
+                {
+                    if(data.badblocks==0)
+                        fcrc=crc32(buffer,sector_size);
+                    else
+                        error_printf("nand read badblock at %x\n",offs/sector_size);
                 }
             }
-            size_t part=fread(buffer,1,sector_size,f);
+            if(!skipread)
+                part=fread(buffer,1,sector_size,f);
             if((part<sector_size)&&(iocmd==ioctl_write))
                 while(part<sector_size)
                     buffer[part++]=0xff;
-            if(cmd==phy_write_if)
+            if(forced||skipread)
+            {
+                skipread=0;
+                fcrc=0,crc=1;
+            }
+            else
             {
                 crc=crc32(buffer,part);
             }
@@ -498,10 +711,26 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
             {
                 data.length=part;
                 data.offset=offs;
+                data.flags=0;
+                data.in.raw=forced?2:1;
                 if(ioctl(fd,iocmd,&data)<0)
                 {
+                    error_printf("nand write failed at block %x\n",offs/sector_size);
                     ret=1;
                     break;
+                }
+                ++sectorsWritten;
+            }
+            if(data.badblocks>0)
+            {
+                data.badblocks=0;
+                --sectorsWritten;
+                error_printf("nand write badblock at %x\n",offs/sector_size);
+                if(!raw)
+                {
+                    offs+=sector_size;
+                    skipread=1;
+                    continue;
                 }
             }
             if(part>size)
@@ -536,12 +765,24 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
             size_t part=(size<sector_size)?size:sector_size;
             data.length=part;
             data.offset=offs;
+            data.flags=0;
+            data.in.raw=raw?2:1;
             if((part<sector_size)&&(cmd!=read_boot0))
                 data.length=sector_size;
             if(ioctl(fd,iocmd,&data)<0)
             {
+                error_printf("nand read failed at block %x\n",offs/sector_size);
                 ret=1;
                 break;
+            }
+            if(data.badblocks>0)
+            {
+                error_printf("nand read badblock at %x\n",offs/sector_size);
+                if(!raw)
+                {
+                    offs+=sector_size;
+                    continue;
+                }
             }
             if(checkHeader)
             {
@@ -552,9 +793,9 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                     uint32_t l=le32toh(data32[(memcmp(buffer+4,"uboot",6)==0)?5:4]);
                     size=l;
                 }
-                boot_img_hdr*h=(boot_img_hdr*)buffer;
-                if(memcmp(h->magic,BOOT_MAGIC,BOOT_MAGIC_SIZE)==0)
+                if(isKernel(buffer))
                 {
+                    boot_img_hdr*h=(boot_img_hdr*)buffer;
                     size=kernelSize(buffer);
                     if(cmd==ramdisk)
                     {
@@ -603,6 +844,7 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                 ret=1;
                 break;
             }
+            bcupdate(&b,buffer+skip,part-skip);
             skip=0;
             size-=part;
             offs+=part;
@@ -611,6 +853,11 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     close(fd);
     if(pf)
         pclose(pf);
+    if(cmd==read_boot2)
+        if(b.match==0)
+            ret=1;
+    if(sectorsWritten)
+        info_printf("nand sectors written: %u\n",sectorsWritten);
     return ret;
 }
 
@@ -698,22 +945,6 @@ int sunxi_flash(uint32_t cmd,uint32_t offs,uint32_t size,const char*fileName)
 }
 
 // #########################################################################
-
-static size_t kernelSize(const void*data)
-{
-    size_t size=0;
-    const boot_img_hdr*h=(const boot_img_hdr*)data;
-    if(memcmp(h->magic,BOOT_MAGIC,BOOT_MAGIC_SIZE)==0)
-    {
-        size_t pages=1;
-        pages+=(h->kernel_size+h->page_size-1)/h->page_size;
-        pages+=(h->ramdisk_size+h->page_size-1)/h->page_size;
-        pages+=(h->second_size+h->page_size-1)/h->page_size;
-        pages+=(h->dt_size+h->page_size-1)/h->page_size;
-        size=pages*h->page_size;
-    }
-    return size;
-}
 
 int kernel(const char*in0)
 {
@@ -841,9 +1072,11 @@ int main(int argc,const char*argv[])
             uint32_t size=0;
             sf_str2cmd(nandinfo);
             sf_str2cmd(nandsize);
+            sf_str2cmd(phy_write_force);
             sf_str2cmd(phy_read);
             sf_str2cmd(phy_write);
-            sf_str2cmd(phy_write_if);
+            sf_str2cmd(log_read);
+            sf_str2cmd(log_write);
             sf_str2cmd(read_boot0);
             sf_str2cmd(burn_boot0);
             sf_str2cmd(read_boot1);

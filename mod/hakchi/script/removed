@@ -1,2 +1,4 @@
+#!/bin/sh
+
 rm -f "$basepath/etc/preinit.d/p7070_preinit"
 rm -f "$basepath/etc/preinit.d/pffff_bootstock"

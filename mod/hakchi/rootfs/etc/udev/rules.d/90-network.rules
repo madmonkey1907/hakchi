@@ -1,0 +1,1 @@
+ACTION=="add|remove", SUBSYSTEM=="net", RUN+="/bin/service network udev"

@@ -1,3 +1,5 @@
+#!/bin/sh
+
 [ "$cfg_firmware" == "_nand_" ] || loadFirmware
 mod_repair_etc
 

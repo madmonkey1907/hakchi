@@ -24,6 +24,7 @@ mod/lib
 mod/lib32/
 
 !*init.d
+!interfaces.d
 
 sntool/sntool
 

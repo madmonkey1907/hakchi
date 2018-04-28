@@ -1,3 +1,5 @@
+#!/bin/sh
+
 backup_one(){
   [ ! -f "$backuppath/$1.gz" ] || return 0
   echo "backup $1"

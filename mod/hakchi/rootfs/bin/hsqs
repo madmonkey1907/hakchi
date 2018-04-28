@@ -20,5 +20,5 @@ save_config
 [ "$(currentFirmware)" == "auto" ] && exit 0 #?
 
 echo "changing firmware to: $firmware"
-reboot
+reboot_kexec
 exit 0

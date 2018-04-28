@@ -1,8 +1,17 @@
+#!/bin/sh
+
 f_clovershell(){
   setSysNode "$CONFIGFS/idVendor" "1f3a"
   setSysNode "$CONFIGFS/idProduct" "efe8"
   setSysNode "$CONFIGFS/functions" "clover"
   setSysNode "$CONFIGFS/enable" "1"
+  env -i USER="root" \
+         LOGNAME="root" \
+         HOME="/root" \
+         SHELL="/bin/sh" \
+         PATH="$PATH" \
+         TERM="linux" \
+         ENV='$HOME/.shrc' \
   clovershell &
   echo "$!" > "/run/clovershell.pid"
 }
@@ -12,6 +21,13 @@ f_shell(){
   service inetd start
   service lmnrd start
   grabSquashfsLibs
+}
+
+f_uartshell(){
+  [ -d "$modpath/transfer" ] && cd "$modpath/transfer" || cd "$temppath"
+  /bin/getty -ni 115200 ttyS0 -l /bin/sh &
+  echo "$!" > "/run/uartshell.pid"
+  cd - >/dev/null
 }
 
 runshell(){
@@ -35,6 +51,7 @@ if [ -z \"\$cf_shell\" ]; then
 fi
   " > "/root/.shrc"
 
+  f_uartshell
   ${1+"$@"}
 
   tail -f "$modpath/init" 1>/dev/null &

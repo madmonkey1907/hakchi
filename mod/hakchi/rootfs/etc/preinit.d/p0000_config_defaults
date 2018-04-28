@@ -1,3 +1,5 @@
+#!/bin/sh
+
 cfg_boot_stock='n'
 [ -z "$cfg_disable_armet" ] && cfg_disable_armet='y'
 [ -z "$cfg_firmware" ] && cfg_firmware='auto'

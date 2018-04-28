@@ -1,6 +1,8 @@
-if [ -d "$preinit.d" ]; then
+#!/bin/sh
+
+if [ -d "$preinit.d" ] && set | grep -qF "cfg_"; then
   local config=p0000_config
-  set | grep -F cfg_ | sort > "$temppath/$config"
+  set | grep -F "cfg_" | sort > "$temppath/$config"
   copy "$temppath/$config" "$preinit.d/$config"
   rm -f "$temppath/$config"
 fi

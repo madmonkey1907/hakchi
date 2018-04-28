@@ -1,0 +1,1 @@
+../3rdparty/mkbootimg/libmincrypt/sha.c

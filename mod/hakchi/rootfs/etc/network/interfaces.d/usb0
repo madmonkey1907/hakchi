@@ -1,0 +1,2 @@
+iface usb0 inet dhcp
+allow-hotplug usb0

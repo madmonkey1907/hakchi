@@ -1,3 +1,5 @@
+#!/bin/sh
+
 mod_uninstall(){
   echo "uninstalling $modname..."
   rm -rf "$installpath"

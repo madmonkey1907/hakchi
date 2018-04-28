@@ -1,3 +1,5 @@
+#!/bin/sh
+
 if [ -f "/sys/devices/sunxi_usb/usb_role" ]; then
   if [ "$cfg_usb_host" = "n" ] || [ "$cf_memboot" = "y" ]; then
     [ "$cf_undershell" = "y" ] || switchToUsbDevice

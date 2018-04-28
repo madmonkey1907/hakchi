@@ -1,3 +1,5 @@
+#!/bin/sh
+
 getCmdLine(){
   dd status=none "if=$1" bs=64 count=8 skip=1 | tr -d '\0' | tr ' ' '\n'
   echo
@@ -27,39 +29,51 @@ insertKeyFile(){
   rm -f "$cmdline"
 }
 
+readBoot2(){
+  sunxi-flash read_boot2 ${1+"$@"}
+}
+
+readBackup2(){
+  readBoot2 68
+}
+
+validBoot2f(){
+  [ -f "$1" ] || return 1
+  sntool check "$1" >/dev/null && return 0
+  echo "invalid image: $1" 1>&2
+  return 1
+}
+
+validBoot2n(){
+  local offs="$1"
+  [ "$offs" -eq "$offs" ] 2>/dev/null || offs="30"
+  readBoot2 "$offs" >/dev/null && return 0
+  echo "invalid image on nand at sector: $offs" 1>&2
+  return 1
+}
+
 flashBoot2(){
   local bootimg="$1"
-  [ -f "$bootimg" ] || return 1
+  validBoot2f "$bootimg" || return 1
   local offset="$2"
   [ -z "$offset" ] && offset=30
-  local size="$3"
-  [ -z "$size" ] && size=20
   local md5i="$(dd status=none bs=128K "if=$bootimg" | md5sum | awk '{print $1}')"
-  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
-  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
-  dd status=none bs=128K "if=$bootimg" | sunxi-flash phy_write_if "$offset" "$size"
-  local md5f="$(sunxi-flash read_boot2 "$offset" | md5sum | awk '{print $1}')"
+  dd status=none bs=128K "if=$bootimg" | sunxi-flash burn_boot2 "$offset"
+  validBoot2n || dd status=none bs=128K "if=$bootimg" | sunxi-flash burn_boot2 "$offset"
+  local md5f="$(readBoot2 "$offset" | md5sum | awk '{print $1}')"
   [ "$md5i" = "$md5f" ] && return 0
   echo "flash md5 mismatch! $md5i($bootimg) != $md5f(flash+$offset)"
   return 1
 }
 
 isOriginalBoot2(){
+  validBoot2n || return 1
   [ "$(sunxi-flash ramdisk | cpio -t 2>/dev/null | grep -F "$modname" | wc -l)" = "0" ] && return 0
   return 1
 }
 
 haveBackup2(){
-  [ "$(sunxi-flash phy_read 68 1 | dd status=none bs=7 count=1)" = "ANDROID" ] && return 0
-  return 1
-}
-
-readBoot2(){
-  sunxi-flash read_boot2
-}
-
-readBackup2(){
-  sunxi-flash read_boot2 68
+  validBoot2n 68
 }
 
 backupBoot2(){
@@ -67,7 +81,7 @@ backupBoot2(){
   isOriginalBoot2 || return 1
   local bootimg="$temppath/boot.img"
   readBoot2 > "$bootimg" || return 1
-  flashBoot2 "$bootimg" 68 18 || return 1
+  flashBoot2 "$bootimg" 68 || return 1
   rm -f "$bootimg"
 }
 
@@ -85,14 +99,16 @@ installBoot2(){
   if [ -d "$rootfs/boot" ]; then
     copy "$1" "$rootfs/boot/"
   else
-    flashBoot2 "$1"
+    flashBoot2 ${1+"$@"}
   fi
 }
 
 memboot(){
   local bootimg="$1";shift
-  [ -f "$bootimg" ] || return 1
-  kexec -l -t zImage "$bootimg" "--command-line=$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@") | xargs)" --atags || return 1
+  validBoot2f "$bootimg" || return 1
+  local cmdline="$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@") | xargs)"
+  echo "memboot $bootimg $cmdline"
+  kexec -l -t zImage "$bootimg" "--command-line=$cmdline" --atags || return 1
   trap ":" HUP TERM
   killall -q clovershell
   uistop
@@ -104,23 +120,32 @@ memboot(){
   while :;do sleep 1;:;done
 }
 
-recovery(){
+reboot_kexec(){
   local bootimg="$1"
-  [ -f "$bootimg" ] && shift
-  local rshell="$modname-shell"
-  pack_list | grep -qF clovershell && rshell="$modname-clovershell"
-  [ "$#" -gt "0" ] && rshell=""
-  [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
-  bootimg="$temppath/boot.img"
-  readBoot2 > "$bootimg" || return 1
-  [ -f "$bootimg" ] && memboot "$bootimg" "$rshell" ${1+"$@"}
+  if [ -f "$bootimg" ]; then
+    shift
+  else
+    bootimg="$rootfs/boot/boot.img"
+    if [ ! -f "$bootimg" ]; then
+      bootimg="$temppath/boot.img"
+      readBoot2 > "$bootimg" || return 1
+    fi
+  fi
+  memboot "$bootimg" "$modname-chainload" ${1+"$@"}
 }
 
-bootBackup2(){
-  haveBackup2 || return 1
-  local bootimg="$temppath/boot.img"
-  readBackup2 > "$bootimg" || return 1
-  memboot "$bootimg"
+clovershellActive(){
+  [ "$cf_clovershell" = "y" ] && return 0
+  (ps | grep -vF grep;pack_list) | grep -qF clovershell
+}
+
+recovery(){
+  local bootimg="$1"
+  [ -f "$bootimg" ] && shift || bootimg=""
+  local rshell="$modname-shell"
+  clovershellActive && rshell="$modname-clovershell"
+  echo "$*" | grep -q "$modname-*shell" && rshell=""
+  reboot_kexec "$bootimg" "$rshell" ${1+"$@"}
 }
 
 getBackup2(){
@@ -130,4 +155,11 @@ getBackup2(){
     isOriginalBoot2 || return 1
     readBoot2
   fi
+}
+
+bootBackup2(){
+  local bootimg="$temppath/boot.img"
+  getBackup2 > "$bootimg" && memboot "$bootimg"
+  rm -f "$bootimg"
+  return 1
 }

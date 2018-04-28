@@ -6,6 +6,7 @@ if [ "$1" = "continue" ]; then
   fi
   cf_undershell='y' sh "$modpath/init"
   exec "$0" "signal"
+  exit 1
 fi
 
 if [ "$1" = "signal" ]; then

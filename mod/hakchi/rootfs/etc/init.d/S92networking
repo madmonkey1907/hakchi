@@ -12,15 +12,22 @@ start(){
 
   ifup -a
   for i in $(ls "$interfaces.d"); do
-    ifup "$i" -i "$interfaces.d/$i" &
+    ifaceDown "$i" && ifup "$i" -i "$interfaces.d/$i" &
   done
 }
 
 stop(){
   for i in $(ls -r "$interfaces.d"); do
-    ifdown "$i" -i "$interfaces.d/$i" &
+    ifdown "$i" -i "$interfaces.d/$i" 2>/dev/null
+    ip link set "$i" down 2>/dev/null
   done
   ifdown -a
+  ip link set lo down
+}
+
+restart(){
+  stop
+  start
 }
 
 case "$1" in
@@ -31,9 +38,15 @@ case "$1" in
     stop
   ;;
   restart)
-    stop
-    sleep 1
-    start
+    restart
+  ;;
+  udev)
+    ifaceUp "lo" || exit 0
+    echo "\"$0\" udev-detached" >> "/var/exec.flag"
+  ;;
+  udev-detached)
+    sleep 2
+    restart
   ;;
   *)
     echo "Usage: $(basename "$0") {start|stop|status|restart}"
