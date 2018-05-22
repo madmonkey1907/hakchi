@@ -118,7 +118,21 @@ isOriginalBoot2(){
 }
 
 haveBackup2(){
-  validBoot2n 68
+  validBoot2n 68 || return 1
+  [ "$(sunxi-flash phy_read 68 1 | dd status=none bs=7 count=1)" = "ANDROID" ] && return 0
+  return 1
+}
+
+readBoot2(){
+  if isSdBoot; then
+    dd if=/dev/mmcblk0 bs=1K skip=20480 count=4096
+  else
+    sunxi-flash read_boot2
+  fi
+}
+
+readBackup2(){
+  sunxi-flash read_boot2 68
 }
 
 backupBoot2(){

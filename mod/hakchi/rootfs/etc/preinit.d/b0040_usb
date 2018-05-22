@@ -165,5 +165,13 @@ checkExtStorage(){
     done
   fi
 
+  mmcUsed || return 1
+  isSdBoot && return 1
+  [ $timeout -gt 2 ] && timeout=2
+  blockDevice="/dev/mmcblk0p"
+  waitForMmcDevice "${blockDevice}1"
+  for p in $(seq 1 9); do
+    checkStorageDevice "$blockDevice$p" && return 0
+  done
   return 1
 }

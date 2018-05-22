@@ -17,6 +17,8 @@ mount -o defaults,gid=5,mode=620 -t devpts devpts /dev/pts
 mount -o mode=077 -t tmpfs tmpfs /dev/shm
 
 keyfile="/key-file"
+echo "cmdline: $(cat "/proc/cmdline")"
+
 for i in $(cat "/proc/cmdline"); do
   if [ "$i" = "ro" ]; then
     READONLY="y"
@@ -24,21 +26,59 @@ for i in $(cat "/proc/cmdline"); do
     ROOTFS="${i#root=}"
   elif [ "$i" = "decrypt" ]; then
     DECRYPT="y"
+  elif [ "$i" = "sdboot" ]; then
+    SD="y"
+  elif [ "${i#waitfor=}" != "$i" ]; then
+    WAITFOR="${i#waitfor=}"
   elif [ "${i#hakchi-key-file=base64:}" != "$i" ]; then
     echo "${i#hakchi-key-file=base64:}" | base64 -d >"$keyfile"
   fi
 done
 
-[ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$ROOTFS")" == "1936814952" ] && DECRYPT="n"
+if [ ! -z "$WAITFOR" ]; then
+  while true; do
+    [ -b "$WAITFOR" ] && break
+    usleep 100000
+  done
+elif grep -qEe 'hakchi-((clover)?shell|memboot)' /proc/cmdline; then
+  usleep 500000
+  if [ -b /dev/mmcblk0 ] && [ "$(head -c6 /dev/mmcblk0)" == "hakchi" ]; then
+    SD="y"
+  fi
+fi
 
-if ! [ -f "$keyfile" ] && [ "$DECRYPT" = "y" ]; then
+if [ "$SD" = "y" ] && [ "$(head -c6 /dev/mmcblk0)" == "hakchi" ]; then
+  if [ ! -b /dev/mmcblk0p2 ]; then
+    mkdir /squashtools
+    losetup -o $((1024*40)) /dev/loop1 /dev/mmcblk0
+    mount /dev/loop1 /squashtools
+    mkdir /tmp
+    cp /squashtools/init /tmp/init
+    sh /tmp/init
+    rm /tmp/init
+    rmdir /tmp
+  fi
+
+  mkdir /firmware
+  mount -t vfat -o ro /dev/mmcblk0p1 /firmware
+  firmware="$(find /firmware -type f -name "*.hsqs" | sort | grep -vEe '/\._' | head -n1)"
+  
+  if [ -f "$firmware" ]; then
+    losetup /dev/loop2 "$firmware" 
+    ROOTFS="/dev/loop2"
+    DECRYPT="n"
+  else
+    ROOTFS="/dev/nandb"
+    DECRYPT="y"
+    [ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$ROOTFS")" == "1936814952" ] && DECRYPT="n"
+  fi
+fi
+
+if [ "${DECRYPT}" = "y" ] && [ ! -f "$keyfile" ]; then
   kfb64="$(sunxi-flash cmdline | sed -ne 's/.*hakchi-key-file=base64:\([^ ]*\).*/\1/p')" && ! [ -z "$kfb64" ] && echo "$kfb64" | base64 -d >"$keyfile"
   unset kfb64
   [ -f "$keyfile" ] || sunxi-flash ramdisk 68 | cpio -iu "$(basename "$keyfile")" 2>/dev/null
   [ -f "$keyfile" ] || sunxi-flash ramdisk | cpio -iu "$(basename "$keyfile")" 2>/dev/null
-  if ! [ -f "$keyfile" ]; then
-    echo nandc
-  fi
 fi
 
 MOUNT_OPTS="noatime"

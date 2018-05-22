@@ -6,7 +6,7 @@ build/hakchi-gui: build/macdylibbundler
 endif
 endif
 
-.PHONY: all clean patch unpatch submodule
+.PHONY: all clean patch unpatch submodule sd sd-xz
 
 clean: unpatch
 	@cd bin && rm -rf sunxi-fel mkbootimg unpackbootimg sntool
@@ -23,6 +23,13 @@ unpatch:
 submodule:
 	@git submodule update --init
 
+sd: 3rdparty/util-linux-2.31.1/sfdisk.static all
+	./make_sd.sh from-make
+
+sd-xz: sd
+	xz -ke9 sd/out/sd.img
+	tar -czvhf "sd/out/sd-installer.hmod" -C sd/sd-installer-hmod/ .
+
 bin/sunxi-fel: 3rdparty/sunxi-tools/sunxi-fel
 	@cp $< $@
 
@@ -34,6 +41,27 @@ bin/mkbootimg: 3rdparty/mkbootimg/mkbootimg
 
 3rdparty/mkbootimg/mkbootimg: 3rdparty/mkbootimg/mkbootimg.c
 	@$(MAKE) -C $(<D)
+
+3rdparty/e2fsprogs/misc/mke2fs.static:
+	cd 3rdparty/e2fsprogs; \
+	./configure --host=arm-linux-gnueabihf && \
+	make && \
+	cd misc && \
+	make mke2fs.static
+
+3rdparty/util-linux-2.31.1/sfdisk.static: 3rdparty/util-linux-2.31.1/configure
+	mkdir -p sfdisk
+	cd "3rdparty/util-linux-2.31.1/" && \
+	./configure --host=arm-linux-gnueabihf --enable-static-programs=sfdisk --without-tinfo --without-util --without-ncurses && \
+	make sfdisk.static && \
+	arm-linux-gnueabihf-strip sfdisk.static
+
+3rdparty/util-linux-2.31.1/configure: 3rdparty/util-linux-2.31.1.tar.xz
+	tar -xJvf "$<" -C "3rdparty"
+	touch "$@"
+
+3rdparty/util-linux-2.31.1.tar.xz: 3rdparty/util-linux-ng.url
+	wget "$(shell cat "$<")" -O "$@" --no-use-server-timestamps
 
 bin/unpackbootimg: 3rdparty/mkbootimg/unpackbootimg
 	@cp $< $@

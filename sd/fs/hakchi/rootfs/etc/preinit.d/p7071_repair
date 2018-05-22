@@ -1,0 +1,5 @@
+if isSdBoot; then
+    source "/$modname/script/install"
+    mod_repair
+fi
+rm "$preinit.d/p7071_repair"
