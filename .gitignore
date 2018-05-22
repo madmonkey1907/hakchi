@@ -30,7 +30,6 @@ dump/*
 mod/bin/
 mod/hakchi/shell/clovershell
 mod/hakchi/transfer/
-mod/lib
 mod/lib32/
 
 !*init.d
@@ -45,6 +44,18 @@ transfer
 hmods/*
 hakchi-hmod/*
 hakchi.hmod
+hakchi-*.hmod
 kernel.hmod/*
 nand/*
 nesromtool/*
+
+3rdparty/util-linux-2.31.1/
+3rdparty/util-linux-2.31.1.tar.xz
+
+sd/boot0.bin
+sd/uboot.bin
+sd/temp/
+sd/out/
+sd/squash/extra-hmods/*.hmod
+sd/fs/hakchi/transfer/
+sd/squash/bin/

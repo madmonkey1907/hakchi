@@ -32,11 +32,15 @@ if ! [ -f "$kernelzImage" ]; then
   [ $(stat -c%s "$kernelzImage") -lt 2220000 ] && compress="lzop"
 fi
 bundled $compress -c "$inpath/initramfs.cpio" > "$inpath/$infile-ramdisk.gz"
-
+if [ "$3" = "noshell" ]; then
+  cmdline="$(cat "$inpath/$infile-cmdline" | xargs)"
+else
+  cmdline="$(cat "$inpath/$infile-cmdline" | xargs) hakchi-shell"
+fi
 mkbootimg \
 --kernel "$kernelzImage" \
 --ramdisk "$inpath/$infile-ramdisk.gz" \
---cmdline "$(cat "$inpath/$infile-cmdline" | xargs) hakchi-shell" \
+--cmdline "$cmdline" \
 --board "$(cat "$inpath/$infile-board")" \
 --base "$(cat "$inpath/$infile-base")" \
 --pagesize "$(cat "$inpath/$infile-pagesize")" \

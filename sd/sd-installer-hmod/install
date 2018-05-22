@@ -1,0 +1,4 @@
+[ -b "/dev/mmcblk0" ] && (xz -dcf "$transferpath/sd.img.xz" | dd of=/dev/mmcblk0 bs=1M)
+rm "$transferpath/sd.img.xz"
+umount -ar
+reboot -f

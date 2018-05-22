@@ -1,3 +1,21 @@
+if isSdBoot; then
+  echo "Installing to hakchi SD card"
+  dd "if=/dev/zero" "of=/dev/mmcblk0" bs=446 count=1 || return 1
+  dd "if=/dev/zero" "of=/dev/mmcblk0" bs=1K seek=8 count=32760 || return 1
+  dd "if=$transferpath/sd/boot0.bin" "of=/dev/mmcblk0" bs=1K seek=8 || return 2
+  dd "if=$transferpath/sd/uboot.bin" "of=/dev/mmcblk0" bs=1K seek=19096 || return 3
+  dd "if=$transferpath/sd/kernel.img" "of=/dev/mmcblk0" bs=1K seek=20480 || return 4
+  dd "if=$transferpath/sd/squash.hsqs" "of=/dev/mmcblk0" bs=1K seek=40 || return 5
+  printf "hakchi\n%s\n" "$(cat "$transferpath/var/version")" | dd "of=/dev/mmcblk0"
+  mkdir -p /tmp/hakchiupdate || return 6
+  mount "$transferpath/sd/squash.hsqs" /tmp/hakchiupdate || return 7
+  rsync -ac --exclude=hakchi/rootfs/etc/preinit.d/p0000_config /tmp/hakchiupdate/fsroot/ "$mountpoint/var/lib/" || return 8
+  umount /tmp/hakchiupdate || return 9
+  rmdir /tmp/hakchiupdate || return 10
+  rm -rf "$transferpath/sd/" || return 11
+  return 1
+fi
+
 # if no kexec, abort
 (uname -r | grep -qF madmonkey) || return 1
 

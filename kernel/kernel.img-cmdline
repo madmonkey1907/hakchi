@@ -1,1 +1,1 @@
- root=/dev/nandb decrypt ro console=ttyS0,115200 loglevel=4 ion_cma_512m=16m coherent_pool=4m consoleblank=0
+root=/dev/nandb decrypt ro console=ttyS0,115200 loglevel=4 ion_cma_512m=16m coherent_pool=4m consoleblank=0 hakchi-shell

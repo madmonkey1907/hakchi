@@ -16,3 +16,6 @@
 [submodule "3rdparty/sun-nontendocm-kernel"]
 	path = 3rdparty/sun-nontendocm-kernel
 	url = git@hakchi.net:hakchi/sun-nontendocm-kernel.git
+[submodule "3rdparty/e2fsprogs"]
+	path = 3rdparty/e2fsprogs
+	url = https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git

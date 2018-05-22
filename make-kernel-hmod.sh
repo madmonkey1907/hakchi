@@ -8,6 +8,8 @@ echo "$ksizestr"
 rsync -ac "kernel.img" "kernel-hmod/boot/boot.img"
 rsync -ac "mod/hakchi/rootfs/etc/preinit.d/b0050_boot" "kernel-hmod/etc/preinit.d/b0050_boot"
 mkdir -p "kernel-hmod/lib/modules"
+mkdir -p "data/modules"
+rsync -ac "3rdparty/sun-nontendocm-kernel/modules-hmod/lib/modules/" "data/modules/" --delete
 rsync -ac "data/modules/" "kernel-hmod/lib/modules/" --delete
 
 bootVersion="v1.0.0"
@@ -20,7 +22,9 @@ set | grep -F "Version" | sort > "kernel-hmod/var/version"
 rm -f hakchi-v*.hmod
 makepack "kernel-hmod/"
 mv "kernel-hmod.hmod" "hakchi-$hakchiVersion.hmod"
-rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"
-rsync -avc "hakchi-$hakchiVersion.hmod" "snes:/tmp/boot/"
-rsync -avc "kernel.img" "snes:/tmp/boot/"
+if [ "$1" != "norsync" ]; then
+  rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"
+  rsync -avc "hakchi-$hakchiVersion.hmod" "snes:/tmp/boot/"
+  rsync -avc "kernel.img" "snes:/tmp/boot/"
+fi
 echo "done"
