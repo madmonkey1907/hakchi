@@ -12,10 +12,20 @@ bin/bin2fex
 bin/fex2bin
 bin/mkbootfs
 
-build*/
-kernel*/
-data/
-dump/
+build*/*
+kernel*/*
+!kernel/kernel.img-base
+!kernel/kernel.img-board
+!kernel/kernel.img-cmdline
+!kernel/kernel.img-hash
+!kernel/kernel.img-kerneloff
+!kernel/kernel.img-pagesize
+!kernel/kernel.img-ramdiskoff
+!kernel/kernel.img-secondoff
+!kernel/kernel.img-tagsoff
+data/*
+!data/zImage
+dump/*
 
 mod/bin/
 mod/hakchi/shell/clovershell
@@ -31,5 +41,9 @@ sntool/sntool
 tmp/
 transfer
 
-hakchi-hmod/
-kernel.hmod/
+hmods/*
+hakchi-hmod/*
+hakchi.hmod
+kernel.hmod/*
+nand/*
+nesromtool/*
