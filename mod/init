@@ -54,7 +54,7 @@ if [ "$SD" = "y" ] && [ "$(head -c6 /dev/mmcblk0)" == "hakchi" ]; then
     mount /dev/loop1 /squashtools
     mkdir /tmp
     cp /squashtools/init /tmp/init
-    sh /tmp/init
+    sh /tmp/init 2>&1 | tee /dev/tty0
     rm /tmp/init
     rmdir /tmp
   fi

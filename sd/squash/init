@@ -1,4 +1,7 @@
 #!/bin/sh
+echo "Partitioning and formatting SD card"
+echo ""
+
 /squashtools/sfdisk /dev/mmcblk0 <<EOT
 32M,96M,06
 128M,,L
