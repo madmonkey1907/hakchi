@@ -11,8 +11,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <error.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#endif
 #include <bootimg.h>
 #include <include/portable_endian.h>
 #include "crc32.h"
@@ -24,6 +26,7 @@ static int disableInfo=0;
 #define error_printf(...) (fprintf(stderr,__VA_ARGS__))
 #define info_printf(...) (disableInfo?0:fprintf(stdout,__VA_ARGS__))
 static size_t kernelSize(const void*data);
+int kernel(const char*in0);
 typedef int (*FILEStream)(FILE*in,FILE*out,void*param);
 #define PHY_INFO_MAGIC 0xaa55a5a5
 
@@ -262,34 +265,51 @@ void bcupdate(struct bootimghash*b,const void*data,uint32_t size)
 
 // #########################################################################
 
-int loffset(uint8_t*data)
+int isNandInfo(const uint8_t*data)
 {
-    uint32_t*data32=(uint32_t*)data;
+    const uint32_t*data32=(const uint32_t*)data;
+    return (le32toh(*data32)==0xaa55a5a5)?1:0;
+}
+
+int loffset(const uint8_t*data)
+{
     if(memcmp(data+4,"eGON.BT",7)==0)
         return 4;
     if(memcmp(data+4,"uboot",6)==0)
         return 5;
-    if(le32toh(*data32)==0xaa55a5a5)
+    if(isNandInfo(data))
         return 1;
     return 0;
 }
 
-int coffset(uint8_t*data)
+int coffset(const uint8_t*data)
 {
-    uint32_t*data32=(uint32_t*)data;
     if(memcmp(data+4,"eGON.BT",7)==0)
         return 3;
     if(memcmp(data+4,"uboot",6)==0)
         return 3;
-    if(le32toh(*data32)==0xaa55a5a5)
+    if(isNandInfo(data))
         return 2;
     return 0;
 }
 
-uint32_t stamp_value(uint8_t*data)
+uint32_t ubsize(const uint8_t*data)
 {
-    uint32_t*data32=(uint32_t*)data;
-    if(le32toh(*data32)==0xaa55a5a5)
+    const int offset=loffset(data);
+    const uint32_t*data32=(const uint32_t*)data;
+    return (offset==0)?0:le32toh(data32[offset]);
+}
+
+uint32_t ubsum(const uint8_t*data)
+{
+    const int offset=coffset(data);
+    const uint32_t*data32=(const uint32_t*)data;
+    return (offset==0)?0:le32toh(data32[offset]);
+}
+
+uint32_t stamp_value(const uint8_t*data)
+{
+    if(isNandInfo(data))
         return 0xae15bc34;
     return 0x5f0a6c39;
 }
@@ -299,23 +319,29 @@ int checksum(const char*in,int fix)
     size_t fs=loadFile(in,0);
     if(fs)
     {
-        info_printf("input: %s, fs: %.8x\n",in,fs);
-        uint8_t data[fs+3];
+        info_printf("input: %s, fs: %.8zx\n",in,fs);
+        uint8_t*data=(uint8_t*)malloc(fs+3);
+        if(data==0)
+            return 1;
         fs=loadFile(in,data);
         uint32_t*data32=(uint32_t*)data;
 
         if(isKernel(data))
         {
             struct bootimghash b;
-            b.i=0;
+            bcinit(&b);
             bcupdate(&b,data,fs);
             info_printf("checksum %s\n",b.match?"OK":"failed");
+            free(data);
+            if(b.match&&fix)
+                kernel(in);
             return b.match?0:1;
         }
 
         if((fs<32)||(loffset(data)==0))
         {
             error_printf("header is not found\n");
+            free(data);
             return 1;
         }
 
@@ -325,38 +351,45 @@ int checksum(const char*in,int fix)
         if((l>fs)||((l%4)!=0))
         {
             error_printf("bad length in header\n");
+            free(data);
             return 1;
         }
         info_printf("header size: 0x%.8x\n",l);
 
-        l/=4;
-        uint32_t c=stamp_value(data)-le32toh(data32[coffset(data)])-le32toh(*hs)+l*4;
-        for(uint32_t i=0;i<l;++i)
+        uint32_t c=stamp_value(data)-ubsum(data);
+        for(uint32_t i=0;i<(l/4);++i)
             c+=le32toh(data32[i]);
-        l*=4;
-        info_printf("checksum: header=0x%.8x file=0x%.8x\n",le32toh(data32[coffset(data)]),c);
+        info_printf("checksum: header=0x%.8x file=0x%.8x\n",ubsum(data),c);
 
-        if((c!=le32toh(data32[coffset(data)]))||(l!=le32toh(*hs))||(l!=fs))
+        uint32_t tl=l;
+        if(isNandInfo(data+l))
+            tl+=ubsize(data+l);
+
+        if((c!=ubsum(data))||(l!=le32toh(*hs))||(tl!=fs))
         {
             if(fix!=0)
             {
-                if(c!=le32toh(data32[coffset(data)]))
+                if(c!=ubsum(data))
                     info_printf("checksum updated\n");
-                if((l!=le32toh(*hs))||(l!=fs))
+                if((l!=le32toh(*hs))||(tl!=fs))
                     info_printf("length updated\n");
                 data32[coffset(data)]=htole32(c);
                 *hs=htole32(l);
-                saveFile(in,data,l);
+                saveFile(in,data,tl);
+                free(data);
                 return 0;
             }
-            if(c!=le32toh(data32[coffset(data)]))
+            if(c!=ubsum(data))
                 error_printf("checksum check failed\n");
-            if((l!=le32toh(*hs))||(l!=fs))
+            if((l!=le32toh(*hs))||(tl!=fs))
                 error_printf("wrong length\n");
-            return (c==le32toh(data32[coffset(data)]))?0:1;
+            const int res=(c==ubsum(data))?0:1;
+            free(data);
+            return res;
         }
 
         info_printf("checksum OK\n");
+        free(data);
         return 0;
     }
     return 1;
@@ -369,16 +402,27 @@ int split(const char*in)
     size_t fs=loadFile(in,0);
     if(fs)
     {
-        checksum(in,1);
-        //info_printf("input: %s, fs: %.8x\n",in,fs);
-        uint8_t data[fs+3];
+        if(checksum(in,0))
+            return 1;
+        uint8_t*data=(uint8_t*)malloc(fs+4);
+        if(data==0)
+            return 1;
         fs=loadFile(in,data);
+        uint32_t*data32=(uint32_t*)data;
+        uint32_t offs=le32toh(data32[5]);
+        if((offs<fs)&&isNandInfo(data+offs))
+        {
+            saveFile("nandinfo.bin",data+offs,fs-offs);
+            fs=offs;
+        }
         while(data[fs-1]==0xff)
             --fs;
-        uint32_t*data32=(uint32_t*)data;
-        uint32_t offs=le32toh(data32[6]);
+        offs=le32toh(data32[6]);
         if((offs==0)||(offs>=fs))
+        {
+            free(data);
             return 1;
+        }
         saveFile("script.bin",data+offs,fs-offs);
         fs=offs;
         while(data[fs-1]==0xff)
@@ -386,6 +430,7 @@ int split(const char*in)
         data32[5]=htole32(fs);
         data32[6]=data32[5];
         saveFile(in,data,fs);
+        free(data);
         checksum(in,1);
         return 0;
     }
@@ -394,21 +439,26 @@ int split(const char*in)
 
 // #########################################################################
 
-int join(const char*in0,const char*in1)
+int join(const char*in0,const char*in1,const char*in2)
 {
     size_t fs0=loadFile(in0,0);
     size_t fs1=loadFile(in1,0);
+    size_t fs2=loadFile(in2,0);
     if(fs0&&fs1)
     {
-        checksum(in0,1);
-        //info_printf("input: %s, fs: %.8x\n",in0,fs0);
-        //info_printf("input: %s, fs: %.8x\n",in1,fs1);
-        uint8_t data[fs0*2+fs1];
+        if(checksum(in0,1))
+            return 1;
+        uint8_t*data=(uint8_t*)malloc((fs0+fs1+fs2)*2);
+        if(data==0)
+            return 1;
         fs0=loadFile(in0,data);
         uint32_t*data32=(uint32_t*)data;
         uint32_t offs=le32toh(data32[6]);
         if((offs!=0)&&(offs!=fs0))
+        {
+            free(data);
             return 1;
+        }
         while(fs0&(0x10000-1))
             data[fs0++]=0xff;
         data32[6]=htole32(fs0);
@@ -416,9 +466,15 @@ int join(const char*in0,const char*in1)
         while(fs0&(0x2000-1))
             data[fs0++]=0xff;
         data32[5]=htole32(fs0);
+        if((fs2>0)&&(checksum(in2,0)==0))
+        {
+            fs0+=loadFile(in2,data+fs0);
+            while(fs0&(0x2000-1))
+                data[fs0++]=0;
+        }
         saveFile(in0,data,fs0);
-        checksum(in0,1);
-        return 0;
+        free(data);
+        return checksum(in0,1);
     }
     return 1;
 }
@@ -441,7 +497,7 @@ int hsqs(const char*in0)
                 uint32_t bs=0x1000;//le32toh(data32[3]);
                 uint32_t fs1=le32toh(data32[0xa]);
                 fs1=((fs1+bs-1)/bs)*bs;
-                info_printf("output fs: %zu\n",fs1);
+                info_printf("output fs: %u\n",fs1);
                 if(fs1<fs0)
                     saveFile(in0,data,fs1);
                 free(data);
@@ -455,6 +511,7 @@ int hsqs(const char*in0)
 
 // #########################################################################
 
+#ifndef _WIN32
 #pragma pack(push,1)
 
 struct burn_param_b
@@ -535,10 +592,10 @@ enum
     _w_unused1,
     cmdline,
     _w_unused2,
-    max_ioctl
+    max_cmd
 };
 
-const unsigned long _iocmd[max_ioctl]={
+const unsigned long _iocmd[max_cmd]={
     ioctl_test,
     ioctl_test,
     ioctl_test,
@@ -559,7 +616,7 @@ const unsigned long _iocmd[max_ioctl]={
     ioctl_test,
 };
 
-const unsigned long _iocmd_param[max_ioctl]={
+const unsigned long _iocmd_param[max_cmd]={
     0,
     0,
     0,
@@ -582,11 +639,11 @@ const unsigned long _iocmd_param[max_ioctl]={
 
 #define sf_str2cmd(x) {if(strcmp((cmdstr),(#x))==0)cmd=(x);}
 
-int verify_test(char*buffer,uint32_t cmd)
+int verify_test(const uint8_t*buffer,uint32_t cmd)
 {
     if(memcmp(buffer,"hakchi",7))
         return 1;
-    struct hakchi_nandinfo*hni=(struct hakchi_nandinfo*)buffer;
+    const struct hakchi_nandinfo*hni=(const struct hakchi_nandinfo*)buffer;
     int odi=disableInfo;
     disableInfo=0;
     if(cmd==nandinfo)
@@ -618,7 +675,7 @@ int isRaw(uint32_t cmd)
 int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
 {
     struct burn_param_t data;
-    char buffer[sector_size];
+    uint8_t buffer[sector_size];
     memset(&data,0,sizeof(data));
     data.buffer=buffer;
     const char*file="/dev/nanda";
@@ -646,10 +703,10 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     const int dir=(cmd&1);//1 - write
     const int raw=isRaw(cmd);
     const int forced=(cmd==phy_write_force)?1:0;
-    size_t skip=0;
     struct bootimghash b;
-    b.i=0;
-    int sectorsWritten=0;
+    bcinit(&b);
+    uint32_t ubcsum=0;
+    uint32_t sectorsWritten=0;
     if(dir)
     {
         size=size?:((size_t)-1);
@@ -663,7 +720,7 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
         }
         int skipread=0;
         size_t part=0;
-        while((ret==0)&&(size>0)&&(!feof(f)))
+        while((ret==0)&&(size>0))
         {
             if(!raw)
             {
@@ -694,7 +751,11 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                 }
             }
             if(!skipread)
+            {
+                if(feof(f))
+                    break;
                 part=fread(buffer,1,sector_size,f);
+            }
             if((part<sector_size)&&(iocmd==ioctl_write))
                 while(part<sector_size)
                     buffer[part++]=0xff;
@@ -741,6 +802,7 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     }
     else
     {
+        size_t skip=0;
         int checkHeader=0;
         if(cmd==read_boot0)
         {
@@ -789,9 +851,9 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                 checkHeader=0;
                 if((memcmp(buffer+4,"eGON.BT",7)==0)||(memcmp(buffer+4,"uboot",6)==0))
                 {
-                    uint32_t*data32=(uint32_t*)buffer;
-                    uint32_t l=le32toh(data32[(memcmp(buffer+4,"uboot",6)==0)?5:4]);
-                    size=l;
+                    size=ubsize(buffer);
+                    ubcsum=stamp_value(buffer)-ubsum(buffer);
+                    ubcsum-=ubsum(buffer);
                 }
                 if(isKernel(buffer))
                 {
@@ -839,12 +901,33 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                 }
                 part=(size<sector_size)?size:sector_size;
             }
+            if(cmd==read_boot1)
+            {
+                if((size==part)&&isNandInfo(buffer+size))
+                {
+                    ubcsum+=stamp_value(buffer+size)-ubsum(buffer+size);
+                    ubcsum-=ubsum(buffer+size);
+                    size+=ubsize(buffer+size);
+                    part=(size<sector_size)?size:sector_size;
+                }
+            }
+            if((cmd==read_boot0)||(cmd==read_boot1))
+            {
+                const uint32_t*data32=(const uint32_t*)(buffer+skip);
+                for(uint32_t i=0;i<((part-skip)/4);++i)
+                {
+                    ubcsum+=data32[i];
+                }
+            }
+            if(cmd==read_boot2)
+            {
+                bcupdate(&b,buffer+skip,part-skip);
+            }
             if(fwrite(buffer+skip,1,part-skip,f)!=(part-skip))
             {
                 ret=1;
                 break;
             }
-            bcupdate(&b,buffer+skip,part-skip);
             skip=0;
             size-=part;
             offs+=part;
@@ -853,6 +936,9 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
     close(fd);
     if(pf)
         pclose(pf);
+    if((cmd==read_boot0)||(cmd==read_boot1))
+        if(ubcsum!=0)
+            ret=1;
     if(cmd==read_boot2)
         if(b.match==0)
             ret=1;
@@ -943,6 +1029,7 @@ int sunxi_flash(uint32_t cmd,uint32_t offs,uint32_t size,const char*fileName)
         fileName=dis;
     return streamFile(dir?fileName:dis,dir?dis:fileName,ioctlStream,&((struct ioctlParam){cmd,offs,size}));
 }
+#endif
 
 // #########################################################################
 
@@ -967,6 +1054,7 @@ int kernel(const char*in0)
             }
             else if(size==fs0)
             {
+                free(data);
                 return 0;
             }
             else
@@ -981,6 +1069,7 @@ int kernel(const char*in0)
 
 // #########################################################################
 
+#ifndef _WIN32
 int devmemStream(FILE*in,FILE*out,void*param)
 {
     int ret=1;
@@ -1020,6 +1109,7 @@ int devmem(uint32_t write,uint32_t offs,uint32_t size,const char*fileName)
     const char*dis="";
     return streamFile(write?fileName:dis,write?dis:fileName,devmemStream,&((struct ioctlParam){write,offs,size}));
 }
+#endif
 
 // #########################################################################
 
@@ -1036,34 +1126,42 @@ int main(int argc,const char*argv[])
             const char*in=(argc>(i+1))?(++i,argv[i]):"capture";
             const char*out=(argc>(i+1))?(++i,argv[i]):"dehexout";
             ret+=dehex(in,out);
+            continue;
         }
         if(strcmp(argv[i],"check")==0)
         {
             const int fix=((argc>(i+1))&&(strcmp(argv[i+1],"-f")==0))?++i:0;
             const char*in=(argc>(i+1))?(++i,argv[i]):"fes1.bin";
             ret+=in?checksum(in,fix):1;
+            continue;
         }
         if(strcmp(argv[i],"split")==0)
         {
             const char*in=(argc>(i+1))?(++i,argv[i]):"uboot.bin";
             ret+=split(in);
+            continue;
         }
         if(strcmp(argv[i],"join")==0)
         {
             const char*in0=(argc>(i+1))?(++i,argv[i]):"uboot.bin";
             const char*in1=(argc>(i+1))?(++i,argv[i]):"script.bin";
-            ret+=join(in0,in1);
+            const char*in2=(argc>(i+1))?(++i,argv[i]):"nandinfo.bin";
+            ret+=join(in0,in1,in2);
+            continue;
         }
         if(strcmp(argv[i],"hsqs")==0)
         {
             const char*in0=(argc>(i+1))?(++i,argv[i]):"rootfs.hsqs";
             ret+=hsqs(in0);
+            continue;
         }
         if(strcmp(argv[i],"kernel")==0)
         {
             const char*in0=(argc>(i+1))?(++i,argv[i]):"kernel.img";
             ret+=kernel(in0);
+            continue;
         }
+#ifndef _WIN32
         if((strcmp(argv[i],"sunxi_flash")==0)||(strcmp(argv[i],"sunxi-flash")==0))
         {
             const char*cmdstr=(argc>(i+1))?(++i,argv[i]):"0xff";
@@ -1087,10 +1185,12 @@ int main(int argc,const char*argv[])
             sf_str2cmd(burn_boot2);
             sf_str2cmd(ramdisk);
             sf_str2cmd(cmdline);
-            const uint32_t params=_iocmd_param[cmd];
+            const uint32_t params=(cmd<max_cmd)?_iocmd_param[cmd]:0;
             if(params>0)
             {
                 offs=(argc>(i+1))?(++i,strtol(argv[i],0,16)):0;
+                if(((cmd==read_boot1)||(cmd==burn_boot1))&&(offs<8))
+                    offs=8+5*((offs?:1)-1);
                 offs*=sector_size;
             }
             if(params>1)
@@ -1103,6 +1203,7 @@ int main(int argc,const char*argv[])
                 ret+=1;
             else
                 ret+=sunxi_flash(cmd,offs,size,in0);
+            continue;
         }
         if((strcmp(argv[i],"devmem")==0)||(strcmp(argv[i],"devmem-write")==0))
         {
@@ -1111,13 +1212,12 @@ int main(int argc,const char*argv[])
             uint32_t size=(argc>(i+1))?(++i,strtol(argv[i],0,0)):0;
             const char*fn0=(argc>(i+1))?(++i,argv[i]):0;
             ret+=devmem(write,offs,size,fn0);
+            continue;
         }
-        if(0)
-        {
-            error_printf("unknown command: %s\n",argv[i]);
-            ret=1;
-            break;
-        }
+#endif
+        error_printf("unknown command: %s\n",argv[i]);
+        ret=1;
+        break;
     }
     return ret;
 }

@@ -7,7 +7,9 @@ backup_one(){
 }
 
 backup_nandb(){
-  [ -b /dev/mapper/root-crypt ] || return 1
+  local nandb="/dev/mapper/root-crypt"
+  checkFirmware "$nandb" || nandb="/dev/nandb"
+  checkFirmware "$nandb" || return 1
   mkdir -p "$backuppath" || return 1
   cd "$mountpoint/etc/clover" || return 1
   local nandb_filename="$(cat boardtype)-$(cat VERSION)-$(cat REGION).hsqs"
@@ -15,8 +17,8 @@ backup_nandb(){
   cd "$backuppath" || return 1
   if [ ! -f "$nandb_filename" ]; then
     echo "backup $nandb_filename"
-    dd if=/dev/mapper/root-crypt bs=4K \
-    count="$((($(hexdump -e '1/4 "%u"' -s $((0x28)) -n 4 /dev/mapper/root-crypt)+0xfff)/0x1000))" \
+    dd "if=$nandb" bs=4K \
+    count="$((($(hexdump -e '1/4 "%u"' -s $((0x28)) -n 4 "$nandb")+0xfff)/0x1000))" \
     > "$nandb_filename" && \
     md5sum "$nandb_filename" > "$nandb_filename.md5"
   fi

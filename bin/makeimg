@@ -20,7 +20,7 @@ else
   echo >/dev/null
 fi
 
-(cd "$inpath/initramfs/bin" && qemu-arm-static -L ".." "./busybox" --list | xargs -rn1 ln -s "busybox" 2>/dev/null) || true
+#(cd "$inpath/initramfs/bin" && qemu-arm-static -L ".." "./busybox" --list | xargs -rn1 ln -s "busybox" 2>/dev/null) || true
 
 (cd "$inpath/initramfs";find -print0 | sort -z | bundled cpio -0o -H newc -R 0:0 --quiet > "../initramfs.cpio")
 #mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"

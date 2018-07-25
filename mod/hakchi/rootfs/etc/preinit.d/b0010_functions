@@ -143,6 +143,10 @@ currentFirmware(){
     echo "_nand_"
     return 0
   fi
+  if checkFirmware "/dev/nandb"; then
+    echo "_nand_"
+    return 0
+  fi
   return 1
 }
 
@@ -270,15 +274,16 @@ linkGames(){
 }
 
 softwareCheck(){
-  [ -d "$mountpoint/etc/clover" ] || return 1
+  [ -d "$squashfs/etc/clover" ] || return 1
   sftype="nes"
   sfregion="usa"
-  [ "$(cat "$mountpoint/etc/clover/boardtype")" == "dp-shvc" ] && sftype="snes"
-  [ "$(cat "$mountpoint/etc/clover/REGION")" == "JPN" ] && sfregion="jpn"
-  [ "$(cat "$mountpoint/etc/clover/REGION")" == "EUR" ] && sfregion="eur"
+  [ "$(cat "$squashfs/etc/clover/boardtype")" == "dp-shvc" ] && sftype="snes"
+  grep -qF "dp-hvcj" "$squashfs/etc/issue" && sftype="hvcj"
+  [ "$(cat "$squashfs/etc/clover/REGION")" == "JPN" ] && sfregion="jpn"
+  [ "$(cat "$squashfs/etc/clover/REGION")" == "EUR" ] && sfregion="eur"
 
   local feck="$mountpoint$profilepath/home-menu/save/system-save.json"
-  if [ "$sftype" == "snes" ]; then
+  if ! [ "$sftype" = "nes" ]; then
     gamepath="/usr/share/games"
     [ -f "$feck" ] && mv -f "$feck" "$feck.nes"
     [ -d "$feck.snes" ] && rm -rf "$feck" && mv "$feck.snes" "$feck"
@@ -516,7 +521,7 @@ totalFor(){
 }
 
 getScript(){
-  sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex ${1+"$@"} 2>/dev/null
+  sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex /dev/stdin ${1+"$@"} 2>/dev/null
 }
 
 setScript(){
@@ -558,5 +563,16 @@ ifaceUp(){
 ifaceDown(){
   ifconfig | grep -qF "$1" && return 1
   ifconfig -a | grep -qF "$1" || return 1
+  return 0
+}
+
+getSquashfsGameList(){
+  [ -d "$squashfs$gamepath" ] || return 1
+  local xcode=""
+  local xxcode=""
+  find "$squashfs$gamepath" -maxdepth 1 -type d -name "CLV-*" | while read xcode; do
+    xxcode="$(basename "$xcode")"
+    grep -F "Name=" "$xcode/$xxcode.desktop" | sed "s%Name=%$xxcode : %g"
+  done | sort
   return 0
 }

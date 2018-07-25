@@ -29,41 +29,86 @@ insertKeyFile(){
   rm -f "$cmdline"
 }
 
+readBoot(){
+  local BN="$1";shift
+  [ "$BN" -eq "$BN" ] 2>/dev/null || return 1
+  sunxi-flash "read_boot$BN" ${1+"$@"}
+}
+
+readBoot0(){
+  readBoot 0 ${1+"$@"}
+}
+
+readBoot1(){
+  readBoot 1 ${1+"$@"}
+}
+
 readBoot2(){
-  sunxi-flash read_boot2 ${1+"$@"}
+  readBoot 2 ${1+"$@"}
 }
 
 readBackup2(){
-  readBoot2 68
+  readBoot 2 68 ${1+"$@"}
 }
 
-validBoot2f(){
+isValidBootImage(){
   [ -f "$1" ] || return 1
   sntool check "$1" >/dev/null && return 0
   echo "invalid image: $1" 1>&2
   return 1
 }
 
-validBoot2n(){
-  local offs="$1"
-  [ "$offs" -eq "$offs" ] 2>/dev/null || offs="30"
-  readBoot2 "$offs" >/dev/null && return 0
-  echo "invalid image on nand at sector: $offs" 1>&2
+validBoot2f(){
+  isValidBootImage ${1+"$@"}
+}
+
+isValidBootImageNand(){
+  local BN="$1"
+  [ "$BN" -eq "$BN" ] 2>/dev/null || return 1
+  local offset="$2"
+  [ "$offset" -eq "$offset" ] 2>/dev/null || return 1
+  readBoot "$BN" "$offset" >/dev/null && return 0
+  echo "invalid image on nand at sector: $offset" 1>&2
   return 1
 }
 
-flashBoot2(){
-  local bootimg="$1"
-  validBoot2f "$bootimg" || return 1
-  local offset="$2"
-  [ -z "$offset" ] && offset=30
+validBoot2n(){
+  local offset="$1";shift
+  [ "$offset" -eq "$offset" ] 2>/dev/null || offset="30"
+  isValidBootImageNand 2 "$offset" ${1+"$@"}
+}
+
+flashBoot(){
+  local BN="$1"
+  [ "$BN" -eq "$BN" ] 2>/dev/null || return 1
+  local bootimg="$3"
+  local offset="$4"
+  [ "$offset" -eq "$offset" ] 2>/dev/null || offset="$2"
+  [ "$offset" -eq "$offset" ] 2>/dev/null || return 1
+  isValidBootImage "$bootimg" || return 1
+  sntool check -f "$bootimg" >/dev/null || return 1
   local md5i="$(dd status=none bs=128K "if=$bootimg" | md5sum | awk '{print $1}')"
-  dd status=none bs=128K "if=$bootimg" | sunxi-flash burn_boot2 "$offset"
-  validBoot2n || dd status=none bs=128K "if=$bootimg" | sunxi-flash burn_boot2 "$offset"
-  local md5f="$(readBoot2 "$offset" | md5sum | awk '{print $1}')"
+  dd status=none bs=128K "if=$bootimg" | sunxi-flash "burn_boot$BN" "$offset"
+  isValidBootImageNand "$BN" "$offset" || dd status=none bs=128K "if=$bootimg" | sunxi-flash "burn_boot$BN" "$offset"
+  local md5f="$(readBoot "$BN" "$offset" | md5sum | awk '{print $1}')"
   [ "$md5i" = "$md5f" ] && return 0
-  echo "flash md5 mismatch! $md5i($bootimg) != $md5f(flash+$offset)"
+  echo "flash md5 mismatch! $md5i($bootimg) != $md5f(flash+$offset)" 1>&2
   return 1
+}
+
+flashBoot0(){
+  sunxi-flash burn_boot0 ${1+"$@"} || return 1
+  readBoot0 >/dev/null && return 0
+  echo "flash boot0 failed!" 1>&2
+  return 1
+}
+
+flashBoot1(){
+  flashBoot 1 8 ${1+"$@"}
+}
+
+flashBoot2(){
+  flashBoot 2 30 ${1+"$@"}
 }
 
 isOriginalBoot2(){
@@ -105,7 +150,7 @@ installBoot2(){
 
 memboot(){
   local bootimg="$1";shift
-  validBoot2f "$bootimg" || return 1
+  isValidBootImage "$bootimg" || return 1
   local cmdline="$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@") | xargs)"
   echo "memboot $bootimg $cmdline"
   kexec -l -t zImage "$bootimg" "--command-line=$cmdline" --atags || return 1

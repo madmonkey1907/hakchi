@@ -19,7 +19,7 @@ set | grep -F "Version" | sort > "kernel-hmod/var/version"
 
 rm -f hakchi-v*.hmod
 makepack "kernel-hmod/"
-mv "kernel-hmod.hmod.tgz" "hakchi-$hakchiVersion.hmod"
+mv "kernel-hmod.hmod" "hakchi-$hakchiVersion.hmod"
 rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"
 rsync -avc "hakchi-$hakchiVersion.hmod" "snes:/tmp/boot/"
 rsync -avc "kernel.img" "snes:/tmp/boot/"

@@ -46,8 +46,7 @@ usbMode(){
 
 getUsbStorageIds(){
   [ -e "/dev/bus/usb" ] || return 1
-  find "/dev/bus/usb/" -type c | while read device
-  do
+  find "/dev/bus/usb/" -type c | while read device; do
     hexdump -n 1 -s 32 "$device" -C | grep -e '^00000020  08' && echo "$device"
   done
 }
@@ -88,6 +87,7 @@ checkStorageDevice(){
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
     umount_if "$mountpoint/media"
     mount -o $rw "$blockDevice" "$mountpoint/media" || return 1
+    [ -d "$mountpoint/media/$modname" ] && \
     copy "$mountpoint/var/version" "$mountpoint/media/$modname/version"
   fi
 

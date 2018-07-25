@@ -1,0 +1,31 @@
+#!/bin/sh
+source /etc/preinit
+script_init
+
+NAME="tinysvcmdns"
+DAEMON="/bin/$NAME"
+case "$1" in
+  start)
+    echo -n "Starting $NAME: "
+    start-stop-daemon -S -q -b -N 10 -x "$DAEMON" -- "$modname" _ssh._tcp 22 "hwid=$(hwid)" "type=$sftype" "region=$sfregion" && echo "OK" || echo "Failed"
+  ;;
+  stop)
+    echo -n "Stopping $NAME: "
+    start-stop-daemon -K -q -n "$NAME" && echo "OK" || echo "Failed"
+  ;;
+  status)
+    start-stop-daemon -K -q -n "$NAME" -t && echo "is running" && exit 0
+    echo "not running" && exit 1
+  ;;
+  restart)
+    "$0" stop
+    "$0" start
+  ;;
+  reload)
+    killall -q -HUP "$NAME"
+  ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|restart|reload}"
+    exit 1
+  ;;
+esac

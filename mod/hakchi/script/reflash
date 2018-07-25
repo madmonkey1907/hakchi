@@ -1,26 +1,38 @@
 #!/bin/sh
 
-umount_base
+reflashSquashfs(){
+  umount_base
 
-local firmware="$(find -type f -name "*.hsqs" | sort | head -n1)"
-if [ -f "$firmware" ]; then
-  umount "$mountpoint"
+  local firmware="$(find -type f -name "*.hsqs" | sort | head -n1)"
+  if [ -f "$firmware" ]; then
+    umount "$mountpoint"
 
-  cryptsetup close root-crypt
-  cryptsetup open /dev/nandb root-crypt --type plain --cipher aes-xts-plain --key-file /key-file
+    local keyfile="/key-file"
+    local nandb="/dev/nandb"
+    local squash="$nandb"
 
-  dd if=/dev/zero of=/dev/mapper/root-crypt bs=512 "seek=$(($(stat -c%s "$firmware")/512))"
-  dd status=none "if=$firmware" of=/dev/mapper/root-crypt bs=128K
+    if [ -f "$keyfile" ]; then
+      cryptsetup close root-crypt
+      cryptsetup open "$nandb" root-crypt --type plain --cipher aes-xts-plain --key-file "$keyfile"
+      squash="/dev/mapper/root-crypt"
+    fi
 
-  cryptsetup close root-crypt
-  cryptsetup open /dev/nandb root-crypt --readonly --type plain --cipher aes-xts-plain --key-file /key-file
+    dd "if=/dev/zero" "of=$squash" bs=512 "seek=$(($(stat -c%s "$firmware")/512))"
+    dd status=none "if=$firmware" "of=$squash" bs=128K
 
-  mount -o ro,noatime /dev/mapper/root-crypt "$mountpoint"
-fi
-unset firmware
+    if [ -f "$keyfile" ]; then
+      cryptsetup close root-crypt
+      cryptsetup open "$nandb" root-crypt --type plain --cipher aes-xts-plain --key-file "$keyfile" --readonly
+    fi
 
-if [ -x "/bin/mke2fs" ]; then
-  yes | mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum /dev/nandc
-fi
+    mount -o ro,noatime "$squash" "$mountpoint"
+  fi
 
-mount_base
+  if [ -x "/bin/mke2fs" ]; then
+    yes | mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum "/dev/nandc"
+  fi
+
+  mount_base
+}
+
+reflashSquashfs

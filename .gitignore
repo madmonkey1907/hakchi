@@ -37,6 +37,7 @@ mod/lib32/
 !interfaces.d
 
 sntool/sntool
+sntool/sntool.exe
 
 tmp/
 transfer

@@ -3,5 +3,5 @@
 cfg_boot_stock='n'
 [ -z "$cfg_disable_armet" ] && cfg_disable_armet='y'
 [ -z "$cfg_firmware" ] && cfg_firmware='auto'
-[ -z "$cfg_usb_host" ] && cfg_usb_host='y'
+cfg_usb_host='y'
 [ -z "$cfg_usb_rw" ] && cfg_usb_rw='n'

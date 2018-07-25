@@ -1,7 +1,7 @@
 #!/bin/sh
 
-#cd /bin
-#busybox --list | busybox xargs -n1 busybox ln -ns "busybox" 2>/dev/null
+cd /bin
+busybox --list | busybox xargs -n1 busybox ln -ns "busybox" 2>/dev/null
 cd /
 
 # devtmpfs does not get automounted for initramfs
@@ -29,7 +29,9 @@ for i in $(cat "/proc/cmdline"); do
   fi
 done
 
-if ! [ -f "$keyfile" ]; then
+[ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$ROOTFS")" == "1936814952" ] && DECRYPT="n"
+
+if ! [ -f "$keyfile" ] && [ "$DECRYPT" = "y" ]; then
   kfb64="$(sunxi-flash cmdline | sed -ne 's/.*hakchi-key-file=base64:\([^ ]*\).*/\1/p')" && ! [ -z "$kfb64" ] && echo "$kfb64" | base64 -d >"$keyfile"
   unset kfb64
   [ -f "$keyfile" ] || sunxi-flash ramdisk 68 | cpio -iu "$(basename "$keyfile")" 2>/dev/null

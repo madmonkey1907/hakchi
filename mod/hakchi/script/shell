@@ -18,8 +18,9 @@ f_clovershell(){
 
 f_shell(){
   service rndis start
-  service inetd start
-  service lmnrd start
+  for s in $(ls /etc/init.d/S93*); do
+    service "$(basename "$s")" start
+  done
   grabSquashfsLibs
 }
 
@@ -59,7 +60,9 @@ fi
   echo "$pid" > "/run/shell.pid"
   wait "$pid"
   usleep 200000
-  service inetd stop
+  for s in $(ls -r /etc/init.d/S93*); do
+    service "$(basename "$s")" stop
+  done
   killall -q sntool
   killall -q sunxi-flash
   exit 0

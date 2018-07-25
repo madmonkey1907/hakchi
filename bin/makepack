@@ -5,7 +5,7 @@ input="$1"
 
 ext=".hmod"
 name="$(basename "$input" "$ext")"
-output="$(pwd)/$name$ext.tgz"
+output="$(pwd)/$name$ext"
 
 rm -f "$output"
 (cd "$input" && tar -mcz --owner=root --group=root --numeric-owner -f "$output" * && echo ok)

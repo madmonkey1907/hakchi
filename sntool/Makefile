@@ -12,15 +12,17 @@ CFLAGS   := $(CFLAGS) -flto=4 -fwhole-program -fuse-linker-plugin \
 CFLAGS   := $(CFLAGS) -fno-stack-protector -fno-ident -fomit-frame-pointer \
   -falign-functions=1 -falign-jumps=1 -falign-loops=1 \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
-  -fmerge-all-constants -fno-math-errno
+  -fmerge-all-constants -fno-math-errno \
+  -mthumb -march=armv7 -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+
 CFLAGS   := $(CFLAGS) -Wl,--as-needed
 CFLAGS   := $(CFLAGS) -DBUILD_COMMIT="\"`git rev-parse --short HEAD``git diff --shortstat --quiet || echo ' (dirty)'`\"" -DBUILD_DATE="\"`date -u +'%Y-%m-%d %H:%M:%S %Z'`\""
 
 CXXFLAGS := $(CFLAGS) -std=gnu++11
-CFLAGS   := $(CFLAGS) -std=gnu11
+CFLAGS   := $(CFLAGS) -std=c99
 
 LIBDIR   :=
-LDFLAGS  := -lm -lc
+LDFLAGS  := -lm
 
 INCLUDE  += $(foreach dir,$(INCLUDES),-I$(dir))
 CFILES   += $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
