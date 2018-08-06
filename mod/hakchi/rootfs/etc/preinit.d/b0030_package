@@ -43,6 +43,7 @@ pack_upath(){
 pack_install(){
   local packFile="$(readlink -f "$1")"
   local packName="$(basename "$1" .hmod)"
+  grep -xqF "$packName" "/etc/hmodblacklist" && return 0
   echo "installing $packName..."
   if [ -f "$packFile" ]; then
     local transferpath="$temppath/pack"
