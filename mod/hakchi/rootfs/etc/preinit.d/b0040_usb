@@ -106,7 +106,7 @@ checkStorageDevice(){
     showImage "$bootlogo2"
     cfg_boot_logo=''
   else
-    [ -f "$bootlogo2" ] && rm -f "$bootlogo2" && source "$preinit.d/p7010_bootlogo"
+    false && [ -f "$bootlogo2" ] && rm -f "$bootlogo2" && source "$preinit.d/p7010_bootlogo"
   fi
 
   local bootsound0="boot.wav"

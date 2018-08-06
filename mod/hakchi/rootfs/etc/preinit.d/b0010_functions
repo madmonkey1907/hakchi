@@ -521,7 +521,11 @@ totalFor(){
 }
 
 getScript(){
-  sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex /dev/stdin ${1+"$@"} 2>/dev/null
+  if [ -z "$1" ]; then
+    sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex 2>/dev/null
+  else
+    sntool devmem 0x43000000 $((128*1024)) | sunxi-fexc -q -I bin -O fex 2>/dev/null 1>"$1"
+  fi
 }
 
 setScript(){
