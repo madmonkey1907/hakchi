@@ -1,0 +1,57 @@
+#!/bin/sh
+
+#https://bazaar.launchpad.net/~elementary-os/elementaryos/zramswap-enabler/view/head:/debian/zramswap.upstart
+
+lmod(){
+  local mod="$1"; shift
+  modprobe "$mod" ${1+"$@"} 2>/dev/null || \
+  insmod "/lib/modules/$(uname -r)/kernel/drivers/staging/$mod/$mod.ko" ${1+"$@"}
+}
+
+start(){
+  local num_cpus="$(grep ^processor /proc/cpuinfo | wc -l)"
+  local mem_total_kb="$(grep ^MemTotal /proc/meminfo | awk '{print $2}')"
+  local mem_total="$((mem_total_kb * 1024))"
+  lmod zsmalloc 2>/dev/null
+  lmod zram "num_devices=$num_cpus" || return 1
+  # initialize the devices, set total size to 1/2 RAM
+  local disksize="$((mem_total / 2 / num_cpus))"
+  for i in $(seq 0 "$((num_cpus - 1))"); do
+    local zram="zram$i"
+    echo "$disksize" > "/sys/block/$zram/disksize"
+    mkswap -L "$zram" "/dev/$zram"
+    swapon -p 100 "/dev/$zram"
+  done
+  echo "1" > "/proc/sys/vm/overcommit_memory"
+}
+
+stop(){
+  for device in $(grep -E '/dev/zram[[:digit:]]+' "/proc/swaps" | awk '{print $1}'); do
+    swapoff "$device"
+  done
+  rmmod zram 2>/dev/null
+  rmmod zsmalloc 2>/dev/null
+}
+
+NAME="zram"
+case "$1" in
+  start)
+    echo "Starting $NAME: "
+    start && echo "OK" || echo "Failed"
+  ;;
+  stop)
+    echo -n "Stopping $NAME: "
+    stop && echo "OK" || echo "Failed"
+  ;;
+  status)
+    grep -E '/dev/zram[[:digit:]]+' "/proc/swaps"
+  ;;
+  restart)
+    "$0" stop
+    "$0" start
+  ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|restart}"
+    exit 1
+  ;;
+esac

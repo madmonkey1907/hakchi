@@ -125,7 +125,7 @@ remount_root(){
 }
 
 checkFirmware(){
-  [ -f "$1" ] || return 1
+  [ -f "$1" ] || [ -b "$1" ] || return 1
   [ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$1")" == "1936814952" ] || return 1
   return 0
 }
@@ -139,11 +139,7 @@ currentFirmware(){
     echo "$firmware"
     return 0
   fi
-  if [ -b "/dev/mapper/root-crypt" ]; then
-    echo "_nand_"
-    return 0
-  fi
-  if checkFirmware "/dev/nandb"; then
+  if checkFirmware "/dev/mapper/root-crypt" || checkFirmware "/dev/nandb"; then
     echo "_nand_"
     return 0
   fi

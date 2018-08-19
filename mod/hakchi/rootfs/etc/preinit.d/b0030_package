@@ -45,8 +45,10 @@ pack_install(){
   local packName="$(basename "$1" .hmod)"
   grep -xqF "$packName" "/etc/hmodblacklist" && return 0
   echo "installing $packName..."
+  local removetransferpath=""
   if [ -f "$packFile" ]; then
-    local transferpath="$temppath/pack"
+    local transferpath="$temppath/pack_$(rand)"
+    removetransferpath="$transferpath"
     rm -rf "$transferpath"
     mkdir -p "$transferpath"
     cd "$transferpath" && tar -xzf "$packFile"
@@ -56,6 +58,7 @@ pack_install(){
   transfer_path "$transferpath"
   if [ -f "$transferpath/uninstall" ] && grep -xqF "no-uninstall" "$transferpath/uninstall"; then
     echo "package $packName installed"
+    [ -d "$removetransferpath" ] && rm -rf "$removetransferpath"
     return 0
   fi
   echo "creating uninstall for $packName..."
@@ -77,6 +80,8 @@ pack_install(){
     rm -f "$unfile"
   fi
   echo "package $packName installed"
+  [ -d "$removetransferpath" ] && rm -rf "$removetransferpath"
+  return 0
 }
 
 pack_list(){
@@ -115,8 +120,53 @@ packs_install(){
 }
 
 packs_uninstall(){
-  for i in $@; do
-    pack_uninstall "$i"
+  while [ $# -gt 0 ]; do
+    pack_uninstall "$1"
+    shift
+  done
+}
+
+curl(){
+  if date -uR | grep -qF "1970"; then
+    rm -f "$profilepath/shutdown.txt"
+    ntpd -qn || return 1
+  fi
+  "$(which curl)" -f ${1+"$@"}
+}
+
+rlist(){
+  for url in $(cat "$rootfs/etc/hmodrepos.conf"); do
+    curl -s "$url/.repo/list"
+  done | grep '.hmod$' | sed 's/.hmod$//g' | sort -u
+}
+
+rinstall(){
+  while [ $# -gt 0 ]; do
+    echo "querying $1..."
+    for url in $(cat "$rootfs/etc/hmodrepos.conf"); do
+      local hurl="$(curl -s "$url/.repo/$1.hmod/link")"
+      if ! [ -z "$hurl" ]; then
+        echo "downloading $1..."
+        if curl "$hurl" -o "$temppath/$1.hmod" && pack_install "$temppath/$1.hmod"; then
+          rm -f "$temppath/$1.hmod"
+        else
+          rm -f "$temppath/$1.hmod"
+          return 1
+        fi
+      fi
+    done
+    shift
+  done
+  return 0
+}
+
+rshow(){
+  while [ $# -gt 0 ]; do
+    for url in $(cat "$rootfs/etc/hmodrepos.conf"); do
+      curl -s "$url/.repo/$1.hmod/readme.txt" && return 0
+      curl -s "$url/.repo/$1.hmod/readme.md" && return 0
+    done
+    shift
   done
 }
 
@@ -126,7 +176,20 @@ hmod(){
       list)
         pack_list || return 1
       ;;
+      rlist)
+        rlist || return 1
+      ;;
+      rshow|show)
+        shift
+        rshow ${1+"$@"}
+        return $?
+      ;;
       install)
+      ;;
+      rinstall)
+        shift
+        rinstall ${1+"$@"}
+        return $?
       ;;
       uninstall)
         shift
@@ -137,9 +200,16 @@ hmod(){
         pack_install "$1" || return 1
       ;;
       *)
-        [ -e "$1" ] || pack_uninstall "$1"
-        [ -f "$1" ] && pack_install "$1"
-        [ -d "$1" ] && packs_install "$1"
+        if [ -e "$1" ]; then
+          [ -f "$1" ] && pack_install "$1"
+          [ -d "$1" ] && packs_install "$1"
+        else
+          if pack_list | grep -qF "$1"; then
+            pack_uninstall "$1"
+          else
+            rinstall "$1"
+          fi
+        fi
       ;;
     esac
     shift
