@@ -14,7 +14,7 @@ grabSquashfsLibs(){
 }
 
 isSdBoot(){
-  [ -e "/dev/mmcblk0" ] && [ "$(head -c 6 "/dev/mmcblk0")" == "hakchi" ] && return 0
+  [ -b "/dev/mmcblk0" ] && [ "$(head -c 6 "/dev/mmcblk0")" == "hakchi" ] && return 0
   return 1
 }
 
