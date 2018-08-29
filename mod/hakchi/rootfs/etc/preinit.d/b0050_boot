@@ -118,21 +118,7 @@ isOriginalBoot2(){
 }
 
 haveBackup2(){
-  validBoot2n 68 || return 1
-  [ "$(sunxi-flash phy_read 68 1 | dd status=none bs=7 count=1)" = "ANDROID" ] && return 0
-  return 1
-}
-
-readBoot2(){
-  if isSdBoot; then
-    dd if=/dev/mmcblk0 bs=1K skip=20480 count=4096
-  else
-    sunxi-flash read_boot2
-  fi
-}
-
-readBackup2(){
-  sunxi-flash read_boot2 68
+  validBoot2n 68
 }
 
 backupBoot2(){
@@ -189,7 +175,11 @@ reboot_kexec(){
     bootimg="$rootfs/boot/boot.img"
     if [ ! -f "$bootimg" ]; then
       bootimg="$temppath/boot.img"
-      readBoot2 > "$bootimg" || return 1
+      if isSdBoot; then
+        dd status=none "if=/dev/mmcblk0" of="$bootimg" bs=1K skip=20480 count=4096 || return 1
+      else
+        readBoot2 > "$bootimg" || return 1
+      fi
     fi
   fi
   memboot "$bootimg" ${1+"$@"}

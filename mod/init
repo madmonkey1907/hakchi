@@ -79,6 +79,9 @@ if [ "${DECRYPT}" = "y" ] && [ ! -f "$keyfile" ]; then
   unset kfb64
   [ -f "$keyfile" ] || sunxi-flash ramdisk 68 | cpio -iu "$(basename "$keyfile")" 2>/dev/null
   [ -f "$keyfile" ] || sunxi-flash ramdisk | cpio -iu "$(basename "$keyfile")" 2>/dev/null
+  if ! [ -f "$keyfile" ]; then
+    echo nandc
+  fi
 fi
 
 MOUNT_OPTS="noatime"

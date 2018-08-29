@@ -8,8 +8,6 @@ echo "$ksizestr"
 rsync -ac "kernel.img" "kernel-hmod/boot/boot.img"
 rsync -ac "mod/hakchi/rootfs/etc/preinit.d/b0050_boot" "kernel-hmod/etc/preinit.d/b0050_boot"
 mkdir -p "kernel-hmod/lib/modules"
-mkdir -p "data/modules"
-rsync -ac "3rdparty/sun-nontendocm-kernel/modules-hmod/lib/modules/" "data/modules/" --delete
 rsync -ac "data/modules/" "kernel-hmod/lib/modules/" --delete
 
 bootVersion="v1.0.0"
