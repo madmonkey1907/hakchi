@@ -9,6 +9,8 @@ lmod(){
 }
 
 start(){
+  echo "1" > "/proc/sys/vm/overcommit_memory"
+
   local num_cpus="$(grep ^processor /proc/cpuinfo | wc -l)"
   local mem_total_kb="$(grep ^MemTotal /proc/meminfo | awk '{print $2}')"
   local mem_total="$((mem_total_kb * 1024))"
@@ -22,7 +24,6 @@ start(){
     mkswap -L "$zram" "/dev/$zram"
     swapon -p 100 "/dev/$zram"
   done
-  echo "1" > "/proc/sys/vm/overcommit_memory"
 }
 
 stop(){

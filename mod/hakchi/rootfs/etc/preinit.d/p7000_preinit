@@ -1,11 +1,21 @@
 #!/bin/sh
 
-if [ "$cfg_boot_stock" == "y" ]; then
+if [ "$cfg_boot_stock" = "y" ]; then
   # load firmware if needed/present
   source_parts "$preinit.d/p????_*firmware*"
   # stop loading
   umount_base 2>/dev/null
   return 0
+fi
+
+if [ "$cfg_wood" = "y" ]; then
+  local logpath="$mountpoint/var/log"
+  mkdir -p "/var" "$logpath"
+  ln -ns -T "$logpath" "${logpath##$mountpoint}"
+  exec 1>"$logpath/boot.log" 2>&1
+  unset logpath
+  syslogd
+  klogd
 fi
 
 echo "loading $modname"

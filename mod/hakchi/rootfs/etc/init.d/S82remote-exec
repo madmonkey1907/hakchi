@@ -4,14 +4,15 @@ DAEMON="/bin/$NAME"
 case "$1" in
   start)
     echo -n "Starting $NAME: "
-    start-stop-daemon -S -q -b -N 10 -x "$DAEMON" && echo "OK" || echo "Failed"
+    { start-stop-daemon -K -q -p "/run/$NAME.pid" -t 2>/dev/null || start-stop-daemon -S -q -b -N 10 -x "$DAEMON" -p "/run/$NAME.pid" -m
+    } && echo "OK" || echo "Failed"
   ;;
   stop)
     echo -n "Stopping $NAME: "
-    start-stop-daemon -K -q -n "$NAME" && echo "OK" || echo "Failed"
+    start-stop-daemon -K -q -p "/run/$NAME.pid" 2>/dev/null && echo "OK" || echo "Failed"
   ;;
   status)
-    start-stop-daemon -K -q -n "$NAME" -t && echo "is running" && exit 0
+    start-stop-daemon -K -q -p "/run/$NAME.pid" -t 2>/dev/null && echo "is running" && exit 0
     echo "not running" && exit 1
   ;;
   restart)

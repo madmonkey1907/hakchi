@@ -4,5 +4,11 @@
 mod_repair_etc
 
 softwareCheck
-
 overmountModules
+modprobe overlayfs
+
+mount_move l media
+mount_move l var
+mount -t overlayfs rootfs -o "ro,noatime,lowerdir=$mountpoint,upperdir=${rootfs##$mountpoint}" "$mountpoint"
+mount_move r var
+mount_move r media

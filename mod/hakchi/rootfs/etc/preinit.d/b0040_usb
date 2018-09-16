@@ -9,6 +9,7 @@ setSysNode(){
 }
 
 disableUsbGadget(){
+  [ "$(usbMode)" = "device" ] || return 0
   setSysNode "/sys/devices/virtual/android_usb/android0/enable" 0
 }
 
@@ -34,8 +35,19 @@ switchToUsbHost(){
   setSysNode "/sys/devices/sunxi_usb/usb_role" 1
 }
 
+switchToUsbOTG(){
+  switchToUsbHost
+  # the usb driver needs some time to initialize
+  if ! timeout="" waittimeout 800 'lsusb | grep -qFv "1d6b:"' "usbhost"; then
+    switchToUsbDevice
+  fi
+}
+
 usbMode(){
-  [ -f "/sys/devices/sunxi_usb/usb_role" ] || echo "device"
+  if ! [ -f "/sys/devices/sunxi_usb/usb_role" ]; then
+    echo "device"
+    return 0
+  fi
   case "$(cat "/sys/devices/sunxi_usb/usb_role")" in
     0) echo "off";;
     1) echo "host";;
@@ -52,23 +64,7 @@ getUsbStorageIds(){
 }
 
 waitForStorageDevice(){
-  local blockDevice="$1"
-  [ -z "$timeout" ] && local timeout=5
-  while [ $timeout -gt 0 ] && ! [ -b "$blockDevice" ]; do
-    echo "waiting for $blockDevice $timeout"
-    let timeout=timeout-1
-    sleep 1
-  done
-  [ -b "$blockDevice" ]
-}
-
-waitForUsbDevice(){
-  [ -z "$(getUsbStorageIds)" ] && return 1
-  waitForStorageDevice ${1+"$@"}
-}
-
-waitForMmcDevice(){
-  waitForStorageDevice ${1+"$@"}
+  waittimeout "" "[ -b $1 ]" "$1"
 }
 
 checkStorageDevice(){
@@ -81,14 +77,15 @@ checkStorageDevice(){
 
   if ! [ "$cfg_usb_rw" == "y" ]; then
     umount_if "$mountpoint/media"
-    mount -o $ro "$blockDevice" "$mountpoint/media" || return 1
+    mount -o $ro "$blockDevice" "$mountpoint/media" 2>/dev/null || return 1
   fi
 
   if [ -d "$mountpoint/media/$saves" ] || [ -d "$mountpoint/media/$modname/transfer" ] || [ "$cfg_usb_rw" == "y" ]; then
     umount_if "$mountpoint/media"
-    mount -o $rw "$blockDevice" "$mountpoint/media" || return 1
+    mount -o $rw "$blockDevice" "$mountpoint/media" 2>/dev/null || return 1
     [ -d "$mountpoint/media/$modname" ] && \
     copy "$mountpoint/var/version" "$mountpoint/media/$modname/version"
+    hmod list | tmpcopy "$mountpoint/media/$modname/hmods"
   fi
 
   if ! [ -d "$mountpoint/media/$modname" ]; then
@@ -123,24 +120,35 @@ checkStorageDevice(){
 }
 
 checkExtStorage(){
+  local timeout="10000"
+
   local di
   local d
   local p
-  local timeout=5
   local blockDevice="/dev/sd"
-  waitForUsbDevice "${blockDevice}a1"
-  for di in $(seq 97 99); do
-    d="$(printf "\\$(printf %o $di)\n")"
-    for p in $(seq 1 9); do
-      checkStorageDevice "$blockDevice$d$p" && return 0
+
+  if [ "$(usbMode)" = "host" ] && waittimeout 700 '! [ -z "$(getUsbStorageIds)" ]' "usb storage"; then
+    waitForStorageDevice "${blockDevice}a"
+    checkStorageDevice "${blockDevice}a" && return 0
+    waitForStorageDevice "${blockDevice}a1"
+    for di in $(seq 97 99); do
+      d="$(printf "\\$(printf %o $di)\n")"
+      for p in $(seq 1 9); do
+        checkStorageDevice "$blockDevice$d$p" && return 0
+      done
     done
-  done
-  mmcUsed || return 1
-  [ $timeout -gt 2 ] && timeout=2
-  blockDevice="/dev/mmcblk0p"
-  waitForMmcDevice "${blockDevice}1"
-  for p in $(seq 1 9); do
-    checkStorageDevice "$blockDevice$p" && return 0
-  done
+  fi
+
+  [ "$timeout" -lt "3000" ] || timeout="3000"
+  if mmcUsed && waittimeout timeout 'ls "/sys/block" | grep -qF "mmc"' "sd card"; then
+    blockDevice="/dev/mmcblk0"
+    waitForStorageDevice timeout "${blockDevice}"
+    checkStorageDevice "${blockDevice}" && return 0
+    waitForStorageDevice timeout "${blockDevice}p1"
+    for p in $(seq 1 9); do
+      checkStorageDevice "${blockDevice}p$p" && return 0
+    done
+  fi
+
   return 1
 }

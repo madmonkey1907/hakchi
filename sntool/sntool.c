@@ -17,7 +17,6 @@
 #endif
 #include <bootimg.h>
 #include <include/portable_endian.h>
-#include "crc32.h"
 #include "sha.h"
 
 // #########################################################################
@@ -718,7 +717,7 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
         {
             offs=offs?:kernel_base_f;
         }
-        int skipread=0;
+        int needsector=1;
         size_t part=0;
         while((ret==0)&&(size>0))
         {
@@ -731,9 +730,20 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                     break;
                 }
             }
-            uint32_t fcrc=0,crc=1;
-            if((!forced)&&(!skipread))
+            if(needsector)
             {
+                if(feof(f))
+                    break;
+                part=fread(buffer,1,sector_size,f);
+                if((part<sector_size)&&(iocmd==ioctl_write))
+                    while(part<sector_size)
+                        buffer[part++]=0xff;
+            }
+            int needwrite=1;
+            if(!forced)
+            {
+                uint8_t buffer2[sector_size];
+                data.buffer=buffer2;
                 data.length=sector_size;
                 data.offset=offs;
                 data.flags=0;
@@ -745,30 +755,13 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                 else
                 {
                     if(data.badblocks==0)
-                        fcrc=crc32(buffer,sector_size);
+                        needwrite=memcmp(buffer,buffer2,sector_size);
                     else
                         error_printf("nand read badblock at %x\n",offs/sector_size);
                 }
+                data.buffer=buffer;
             }
-            if(!skipread)
-            {
-                if(feof(f))
-                    break;
-                part=fread(buffer,1,sector_size,f);
-            }
-            if((part<sector_size)&&(iocmd==ioctl_write))
-                while(part<sector_size)
-                    buffer[part++]=0xff;
-            if(forced||skipread)
-            {
-                skipread=0;
-                fcrc=0,crc=1;
-            }
-            else
-            {
-                crc=crc32(buffer,part);
-            }
-            if(crc!=fcrc)
+            if(needwrite!=0)
             {
                 data.length=part;
                 data.offset=offs;
@@ -780,20 +773,20 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                     ret=1;
                     break;
                 }
+                if(data.badblocks>0)
+                {
+                    data.badblocks=0;
+                    error_printf("nand write badblock at %x\n",offs/sector_size);
+                    if(!raw)
+                    {
+                        offs+=sector_size;
+                        needsector=0;
+                        continue;
+                    }
+                }
                 ++sectorsWritten;
             }
-            if(data.badblocks>0)
-            {
-                data.badblocks=0;
-                --sectorsWritten;
-                error_printf("nand write badblock at %x\n",offs/sector_size);
-                if(!raw)
-                {
-                    offs+=sector_size;
-                    skipread=1;
-                    continue;
-                }
-            }
+            needsector=1;
             if(part>size)
                 part=size;
             size-=part;
@@ -846,6 +839,13 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                     continue;
                 }
             }
+            if(skip>=part)
+            {
+                skip-=part;
+                size-=part;
+                offs+=part;
+                continue;
+            }
             if(checkHeader)
             {
                 checkHeader=0;
@@ -864,24 +864,17 @@ int sunxi_flash_ioctl(uint32_t cmd,uint32_t offs,uint32_t size,FILE*f)
                         size_t pages=1;
                         pages+=(h->kernel_size+h->page_size-1)/h->page_size;
                         pages*=h->page_size;
-                        skip=pages%sector_size;
-                        size=h->ramdisk_size+skip;
-                        const size_t adv=pages/sector_size;
-                        if(!isatty(fileno(stdout)))
-                        {
-                            checkHeader=1;
-                        }
-                        if(adv>0)
-                        {
-                            offs+=adv*sector_size;
-                            continue;
-                        }
+                        skip=pages-sector_size;
+                        size=skip+h->ramdisk_size;
+                        offs+=sector_size;
+                        checkHeader=1;
+                        continue;
                     }
                     if(cmd==cmdline)
                     {
                         skip=offsetof(boot_img_hdr,cmdline);
                         h->cmdline[sizeof(h->cmdline)-1]=0;
-                        size=strlen((const char*)h->cmdline)+skip;
+                        size=skip+strlen((const char*)h->cmdline);
                     }
                 }
                 if(cmd==ramdisk)

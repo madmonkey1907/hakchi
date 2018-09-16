@@ -130,8 +130,13 @@ curl(){
   if date -uR | grep -qF "1970"; then
     rm -f "$profilepath/shutdown.txt"
     ntpd -qn || return 1
+    rm -f "$profilepath/shutdown.txt"
   fi
-  "$(which curl)" -f ${1+"$@"}
+  if [ -z "$(which curl)" ]; then
+    echo "you need curl for that, bub"
+    return 1
+  fi
+  "$(which curl)" -Lf ${1+"$@"}
 }
 
 rlist(){
@@ -149,9 +154,10 @@ rinstall(){
         echo "downloading $1..."
         if curl "$hurl" -o "$temppath/$1.hmod" && pack_install "$temppath/$1.hmod"; then
           rm -f "$temppath/$1.hmod"
+          break
         else
           rm -f "$temppath/$1.hmod"
-          return 1
+          continue
         fi
       fi
     done
@@ -168,6 +174,7 @@ rshow(){
     done
     shift
   done
+  return 1
 }
 
 hmod(){
@@ -191,7 +198,7 @@ hmod(){
         rinstall ${1+"$@"}
         return $?
       ;;
-      uninstall)
+      uninstall|remove)
         shift
         packs_uninstall ${1+"$@"}
         return $?
@@ -203,15 +210,20 @@ hmod(){
         if [ -e "$1" ]; then
           [ -f "$1" ] && pack_install "$1"
           [ -d "$1" ] && packs_install "$1"
+        elif rlist | grep -q "^$1$"; then
+          rinstall "$1"
+        elif pack_list | grep -qF "$1"; then
+          pack_uninstall "$1"
         else
-          if pack_list | grep -qF "$1"; then
-            pack_uninstall "$1"
-          else
-            rinstall "$1"
-          fi
+          echo "no package: $1"
+          return 1
         fi
       ;;
     esac
     shift
   done
+}
+
+update(){
+  rinstall "$modname-latest"
 }

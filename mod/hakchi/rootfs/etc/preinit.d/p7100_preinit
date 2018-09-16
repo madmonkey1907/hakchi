@@ -2,8 +2,9 @@
 
 createVersionFile
 
-overmount "/bin"
-overmount "/etc"
+overmount -f "/bin"
+overmount -f "/etc"
+overmount -f "/root"
 
 if ! clovershellActive; then
   overmount "/etc/init.d/S92rndis" "/etc/init.d/S90usb-gadget"

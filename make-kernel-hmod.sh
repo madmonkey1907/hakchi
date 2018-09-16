@@ -12,7 +12,7 @@ rsync -ac "data/modules/" "kernel-hmod/lib/modules/" --delete
 
 bootVersion="v1.0.0"
 eval "$(grep -F "bootVersion=" "mod/hakchi/init")"
-#hakchiVersion="$(./updateVersion.sh -s)"
+./updateVersion.sh
 eval "$(grep -F "hakchiVersion=" "mod/hakchi/rootfs/etc/preinit.d/b0000_defines")"
 kernelVersion="$(ls "kernel-hmod/lib/modules")"
 set | grep -F "Version" | sort > "kernel-hmod/var/version"
@@ -20,7 +20,7 @@ set | grep -F "Version" | sort > "kernel-hmod/var/version"
 rm -f hakchi-v*.hmod
 makepack "kernel-hmod/"
 mv "kernel-hmod.hmod" "hakchi-$hakchiVersion.hmod"
-rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"
-rsync -avc "hakchi-$hakchiVersion.hmod" "snes:/tmp/boot/"
-rsync -avc "kernel.img" "snes:/tmp/boot/"
+#rsync -avc "hakchi-$hakchiVersion.hmod" "hakchi:/var/www/hakchi/"
+#rsync -avc "hakchi-$hakchiVersion.hmod" "snes:/tmp/boot/"
+#rsync -avc "kernel.img" "snes:/tmp/boot/"
 echo "done"

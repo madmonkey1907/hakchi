@@ -10,6 +10,7 @@ case "$1" in
   stop)
     echo -n "Stopping $NAME: "
     start-stop-daemon -K -q -n "$NAME" && echo "OK" || echo "Failed"
+    killall -q "$NAME"
     for s in $(cat "/etc/inetd.conf" | awk '{print $6}'); do
       killall -q "$s"
     done

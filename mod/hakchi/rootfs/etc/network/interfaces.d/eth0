@@ -1,2 +1,4 @@
 iface eth0 inet dhcp
 allow-hotplug eth0
+up rm -f /var/saves/shutdown.txt
+up ntpd -qn && rm -f /var/saves/shutdown.txt

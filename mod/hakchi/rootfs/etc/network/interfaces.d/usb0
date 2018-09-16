@@ -1,2 +1,4 @@
 iface usb0 inet dhcp
 allow-hotplug usb0
+up rm -f /var/saves/shutdown.txt
+up ntpd -qn && rm -f /var/saves/shutdown.txt

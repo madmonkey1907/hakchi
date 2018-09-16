@@ -23,6 +23,6 @@ echo "$1" > "$state_file"
 
 echo "New directory: $targetpath"
 uistop
+timeout="" waittimeout 1500 '! lsof -n | grep -qF "/dev/fb0"' "framebuffer"
 overmount_games "$1"
-sleep 1
 touch "/var/startmcp.flag"

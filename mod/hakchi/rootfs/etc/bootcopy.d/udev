@@ -1,0 +1,6 @@
+/etc/init.d/S10udev
+/etc/udev/
+/lib/udev/
+/sbin/udevadm
+/sbin/udevd
+/usr/bin/udevadm

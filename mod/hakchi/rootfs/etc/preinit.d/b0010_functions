@@ -9,8 +9,8 @@ Special thanks to all of the contributors including: $(shuf /etc/contributors | 
 }
 
 grabSquashfsLibs(){
-  copy "$mountpoint/lib/" "/lib32/" --ignore-existing  --exclude "modules/"
-  ln -nsf "$rootfs/lib/modules" "/lib32/modules"
+  copy "$mountpoint/lib/" "/lib32/" --ignore-existing --exclude "modules/"
+  [ -d "/lib32/modules" ] || ln -nsf -T "$rootfs/lib/modules" "/lib32/modules"
 }
 
 squashDevice(){
@@ -36,9 +36,6 @@ mountSquash(){
   umountSquash || return 1
   mountpoint -q "$mountpoint" || return 1
   mkdir -p "$squashfs"
-#  local sdev="$(squashDevice)"
-#  [ -z "$sdev" ] && return 1
-#  mount -o ro,noatime "$sdev" "$squashfs"
   mount -o bind,ro "$mountpoint" "$squashfs" || return 1
   grabSquashfsLibs; return 0
 }
@@ -49,6 +46,14 @@ mount_base(){
   mountSquash
   mkdir -p "$mountpoint/var/lib"
   mountpoint -q "$mountpoint/var/lib" || mount -o defaults,nosuid,nodev,noatime "/dev/nandc" "$mountpoint/var/lib"
+}
+
+mount_base_ro(){
+  mkdir -p "$mountpoint/var"
+  mountpoint -q "$mountpoint/var" || mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs "$mountpoint/var" || return 1
+  mountSquash
+  mkdir -p "$mountpoint/var/lib"
+  mountpoint -q "$mountpoint/var/lib" || mount -o defaults,nosuid,nodev,noatime,ro "/dev/nandc" "$mountpoint/var/lib"
 }
 
 umount_base(){
@@ -81,6 +86,7 @@ mod_repair_etc(){
   fi
   copy "$etc/" "$rootfs/etc/"
   rm -rf "$etc"
+  mkdir -p "$rootfs/root"
 }
 
 mod_repair_modules(){
@@ -130,6 +136,10 @@ checkFirmware(){
   return 0
 }
 
+nandbUnlocked(){
+  checkFirmware "/dev/mapper/root-crypt" || checkFirmware "/dev/nandb"
+}
+
 currentFirmware(){
   local firmware="$(losetup -a | grep -F "$(squashDevice)" | head -n1 | awk '{print $3}')"
   if ! [ -z "$firmware" ]; then
@@ -139,7 +149,7 @@ currentFirmware(){
     echo "$firmware"
     return 0
   fi
-  if checkFirmware "/dev/mapper/root-crypt" || checkFirmware "/dev/nandb"; then
+  if nandbUnlocked; then
     echo "_nand_"
     return 0
   fi
@@ -191,6 +201,7 @@ shutdown(){
 
 reboot(){
   echo "Restarting system."
+  reboot_kexec
   sync
   cd /
   umount -a -r 2>/dev/null
@@ -223,6 +234,13 @@ copy_mask(){
   rsync -ac $src "$dst" ${1+"$@"}
 }
 
+tmpcopy(){
+  local tmpc="$temppath/c$(rand).tmp"
+  cat > "$tmpc"
+  copy "$tmpc" "$1"
+  rm -f "$tmpc"
+}
+
 restore(){
   if mountpoint -q "$squashfs" && [ -e "$squashfs$1" ]; then
     copy "$squashfs$1" "$rootfs$1"
@@ -241,7 +259,13 @@ mount_bind(){
 }
 
 overmount(){
+  local force="false"
+  if [ "$1" = "-f" ]; then
+    shift
+    force="true"
+  fi
   if [ "$#" == "1" ]; then
+    $force || return 0 #overlayfs
     echo "overmounting $1"
     mount_bind "$rootfs$1" "$mountpoint$1" && return 0
   fi
@@ -265,7 +289,7 @@ linkGames(){
   [ -d "$games" ] || games="$1"
   games="${games##$mountpoint}"
   rm -f "$mountpoint/var/games"
-  ln -nsf "$games" "$mountpoint/var/games"
+  ln -nsf -T "$games" "$mountpoint/var/games"
   return 0
 }
 
@@ -293,7 +317,7 @@ softwareCheck(){
   mkdir -p "$mountpoint$profilepath/$modname"
 
   rm -f "$mountpoint/var/saves"
-  ln -nsf "$profilepath" "$mountpoint/var/saves"
+  ln -nsf -T "$profilepath" "$mountpoint/var/saves"
 }
 
 repair_fonts(){
@@ -575,4 +599,24 @@ getSquashfsGameList(){
     grep -F "Name=" "$xcode/$xxcode.desktop" | sed "s%Name=%$xxcode : %g"
   done | sort
   return 0
+}
+
+waittimeout(){
+  local t="$1"
+  local wasted="0"
+  [ "$timeout" -eq "$timeout" ] 2>/dev/null || local timeout="30000"
+  [ "$t" -eq "$t" ] 2>/dev/null || t="$timeout"
+  [ "$t" -lt "$timeout" ] || t="$timeout"
+  while ! eval "$2"; do
+    [ "$t" -lt "100" ] && break
+    [ ! -z "$3" ] && echo "waiting for $3 ... $((t/1000))"
+    for i in $(seq 1 10); do
+      [ "$t" -lt "100" ] && break || usleep 100000
+      t="$((t-100))"; timeout="$((timeout-100))"
+      wasted="$((wasted+100))"
+      eval "$2" && break
+    done
+  done
+  [ ! -z "$3" ] && [ "$wasted" -gt "0" ] && [ "$cfg_wood" = "y" ] && echo "wasted ${wasted}ms waiting for $3"
+  eval "$2"
 }

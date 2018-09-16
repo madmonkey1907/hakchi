@@ -31,6 +31,7 @@ mod_repair(){
   copy "$modpath/rootfs/" "$rootfs/"
 
   mod_repair_etc full
+  find "$preinit.d/" -type f -name "*.tmp" -delete
   cd /
 }
 

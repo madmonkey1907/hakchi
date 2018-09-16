@@ -1,0 +1,8 @@
+/bin/aplay
+/bin/bin2fex
+/bin/fbgrab
+/bin/fex2bin
+/bin/sunxi-fexc
+/bin/sunxi-nand-part
+/bin/sunxi-pio
+/bin/xdelta3

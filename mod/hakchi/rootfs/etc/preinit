@@ -1,3 +1,5 @@
+#!/bin/sh
+
 rand(){
   hexdump -e '"%x"' -n 4 /dev/urandom
 }
@@ -22,6 +24,10 @@ source_parts(){
 source_base(){
   if [ -d "$1" ]; then
     source_parts "$1/b????_*"
+    return 0
+  fi
+  if [ "$cf_memboot" = "y" ] && [ -d "$modpath/rootfs/etc/preinit.d" ]; then
+    source_parts "$modpath/rootfs/etc/preinit.d/b????_*"
     return 0
   fi
   if [ -d "$preinit.d" ]; then

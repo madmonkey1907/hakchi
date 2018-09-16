@@ -151,11 +151,13 @@ installBoot2(){
 memboot(){
   local bootimg="$1";shift
   isValidBootImage "$bootimg" || return 1
-  local cmdline="$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@") | xargs)"
+  local mbHost=""; [ "$(usbMode)" = "host" ] && mbHost="$modname-usb-host"
+  local cmdline="$(getCmdLine "$bootimg" | (grep -v "$modname-*shell"; echo "$@"; echo "$modname-chainload $mbHost") | xargs)"
   echo "memboot $bootimg $cmdline"
   kexec -l -t zImage "$bootimg" "--command-line=$cmdline" --atags || return 1
   trap ":" HUP TERM
   killall -q clovershell
+  service inetd stop
   uistop
   sync
   cd /
@@ -176,7 +178,7 @@ reboot_kexec(){
       readBoot2 > "$bootimg" || return 1
     fi
   fi
-  memboot "$bootimg" "$modname-chainload" ${1+"$@"}
+  memboot "$bootimg" ${1+"$@"}
 }
 
 clovershellActive(){
@@ -193,7 +195,14 @@ recovery(){
   reboot_kexec "$bootimg" "$rshell" ${1+"$@"}
 }
 
+needKeyFile(){
+  [ -z "$mountpoint" ] && return 1
+  nandbUnlocked && return 1
+  return 0
+}
+
 getBackup2(){
+  needKeyFile && return 1
   if haveBackup2; then
     readBackup2
   else

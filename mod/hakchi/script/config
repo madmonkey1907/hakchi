@@ -10,6 +10,7 @@ grepCMDLine "$modname-chainload" && cf_chainload='n'
 grepCMDLine "$modname-memboot" && cf_memboot='y'
 grepCMDLine "$modname-clovershell" && cf_clovershell='y'
 grepCMDLine "$modname-shell" && cf_shell='y'
+grepCMDLine "$modname-usb-host" && cf_usb_mode='host'
 
 if grepCMDLine "$modname-install"; then
   cf_install='y'

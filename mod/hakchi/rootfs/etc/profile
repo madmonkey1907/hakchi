@@ -5,7 +5,7 @@
 PATH="/usr/local/bin:/usr/bin:/bin"
 EDITOR="vi"				# needed for packages like cron, git-commit
 [ -z "$TERM" ] && TERM="xterm-color"	# Basic terminal capab. For screen etc.
-[ -z "$(find /usr/share/terminfo -name $TERM)" ] && TERM="xterm-color"
+[ -d "/usr/share/terminfo" ] && [ -z "$(find /usr/share/terminfo -name $TERM)" ] && TERM="xterm-color"
 
 if [ "$HOME" = "/root" ]; then
    PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin

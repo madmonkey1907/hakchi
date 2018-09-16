@@ -26,7 +26,7 @@ fi
 #mkbootfs "$inpath/initramfs" > "$inpath/initramfs.cpio"
 
 kernelzImage="$inpath/../data/zImage"
-compress="xz --check=crc32 --lzma2=dict=1MiB"
+compress="xz --check=crc32 --lzma2=preset=9e,dict=32MiB"
 if ! [ -f "$kernelzImage" ]; then
   kernelzImage="$inpath/$infile-zImage"
   [ $(stat -c%s "$kernelzImage") -lt 2220000 ] && compress="lzop"
