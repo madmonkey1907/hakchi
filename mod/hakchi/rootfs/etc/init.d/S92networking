@@ -43,7 +43,8 @@ case "$1" in
   udev)
     ifaceUp "lo" || exit 0
     [ "$(usbMode)" = "host" ] || exit 1
-    echo "\"$0\" udev-detached" >> "/var/exec.flag"
+    local self="$(readlink -f "$0")"
+    echo "\"$self\" udev-detached" >> "/var/exec.flag"
   ;;
   udev-detached)
     [ "$(usbMode)" = "host" ] || exit 1

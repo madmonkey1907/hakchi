@@ -67,6 +67,14 @@ waitForStorageDevice(){
   waittimeout "" "[ -b $1 ]" "$1"
 }
 
+fslabel(){
+  [ -b "$1" ] && udevadm info --query=all "--name=$1" | grep -E '^E: ID_FS_LABEL=(.*)' | sed 's/^E: ID_FS_LABEL=//g'
+}
+
+fstype(){
+  [ -b "$1" ] && udevadm info --query=all "--name=$1" | grep -E '^E: ID_FS_TYPE=(.*)' | sed 's/^E: ID_FS_TYPE=//g'
+}
+
 checkStorageDevice(){
   local blockDevice="$1"
   [ -b "$blockDevice" ] || return 1
@@ -89,6 +97,12 @@ checkStorageDevice(){
   fi
 
   if ! [ -d "$mountpoint/media/$modname" ]; then
+    { echo "ls -l \"$mountpoint/media\""
+      ls -l "$mountpoint/media"
+      echo
+      echo "mounted $blockDevice ($(fslabel "$blockDevice")) type $(fstype "$blockDevice"), but there is no /$modname directory"
+      echo "are you pulling my leg?"
+    } 2>&1 1>/dev/tty0
     umount_if "$mountpoint/media"
     return 1
   fi
@@ -130,9 +144,10 @@ checkExtStorage(){
   if [ "$(usbMode)" = "host" ] && waittimeout 700 '! [ -z "$(getUsbStorageIds)" ]' "usb storage"; then
     waitForStorageDevice "${blockDevice}a"
     checkStorageDevice "${blockDevice}a" && return 0
-    waitForStorageDevice "${blockDevice}a1"
     for di in $(seq 97 99); do
       d="$(printf "\\$(printf %o $di)\n")"
+      blockdev --getsize64 "${blockDevice}${d}" 1>/dev/null 2>&1 || continue
+      waitForStorageDevice "${blockDevice}${d}1" || continue
       for p in $(seq 1 9); do
         checkStorageDevice "$blockDevice$d$p" && return 0
       done

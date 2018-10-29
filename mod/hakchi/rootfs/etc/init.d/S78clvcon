@@ -1,18 +1,53 @@
 #!/bin/sh
 
-[ -f "/etc/clover/boardtype" ] || exit 1
-CLV_BOARD_NAME="$(cat "/etc/clover/boardtype")"
-MODULE="clvcon"
-[ -f "/lib/modules/$(uname -r)/extra/$MODULE.ko" ] || MODULE="clovercon"
+getb2sector(){
+  sunxi-flash log_read 68 1
+}
+
+getb2sha1(){
+  cat ${1+"$@"} | dd status=none bs=32 skip=18 count=1 | hexdump -e '/1 "%02x"' -n20
+}
 
 getboot2note(){
-  local b2md5="$(hakchi getBackup2 | md5sum | awk '{print $1}')"
-  grep -F "$b2md5" "/etc/firmwaredb" | cut -d\  -f4-
+  local b2sha1="$(getb2sector | getb2sha1)"
+  grep -F "$b2sha1" "/etc/firmwaredb" | cut -d\  -f4-
+}
+
+getmodulename(){
+  local MODULE="clovercon"
+  [ -f "/lib/modules/$(uname -r)/extra/$MODULE.ko" ] || MODULE="clvcon"
+  echo "$MODULE"
 }
 
 start(){
+  status -q && return 0
+  local MODULE="$(getmodulename)"
+  source /etc/preinit
+  script_short_init
+
+  local csmd5="$(set | grep -F 'cfg_clovercon' | md5sum)"
+#  [ "$cfg_clovercon_enabled" = "n" ] || cfg_clovercon_enabled='y'
+  if [ "$cfg_clovercon_enabled" = "y" ]; then
+    [ -z "$cfg_clovercon_home_combination" ] && cfg_clovercon_home_combination='0x24'
+    [ -z "$cfg_clovercon_autofire" ] && cfg_clovercon_autofire='1'
+    [ -z "$cfg_clovercon_autofire_xy" ] && cfg_clovercon_autofire_xy='0'
+    [ -z "$cfg_clovercon_autofire_interval" ] && cfg_clovercon_autofire_interval='8'
+    [ -z "$cfg_clovercon_fc_start" ] && cfg_clovercon_fc_start='0'
+    [ "$csmd5" = "$(set | grep -F 'cfg_clovercon' | md5sum)" ] || save_config
+
+    echo "clovercon hack: starting driver $MODULE"
+    echo "home button combination: $cfg_clovercon_home_combination"
+    echo "autofire: $cfg_clovercon_autofire"
+    echo "autofire XY: $cfg_clovercon_autofire_xy"
+    echo "autofire interval: $cfg_clovercon_autofire_interval"
+    echo "famicom 2nd start workaround: $cfg_clovercon_fc_start"
+  else
+    echo "$MODULE: starting driver"
+  fi
+
   local MODULE_PARAMS=""
-  echo "$MODULE: starting driver"
+  local CLV_BOARD_NAME=""
+  [ -f "$squashfs/etc/clover/boardtype" ] && CLV_BOARD_NAME="$(cat "$squashfs/etc/clover/boardtype")"
   case "${CLV_BOARD_NAME}" in
     fp)
       # inverted c1/c2 detect lines
@@ -28,12 +63,28 @@ start(){
     ;;
   esac
   [ "$(getboot2note)" = "hardwired controllers" ] && MODULE_PARAMS="1,-1,2,-1"
-  modprobe "$MODULE" "module_params=$MODULE_PARAMS"
+
+  if [ "$cfg_clovercon_enabled" = "y" ]; then
+    modprobe "$MODULE" "module_params=$MODULE_PARAMS" \
+             "home_combination=$cfg_clovercon_home_combination" \
+             "autofire=$cfg_clovercon_autofire" \
+             "autofire_xy=$cfg_clovercon_autofire_xy" \
+             "autofire_interval=$cfg_clovercon_autofire_interval" \
+             "fc_start=$cfg_clovercon_fc_start"
+  else
+    modprobe "$MODULE" "module_params=$MODULE_PARAMS"
+  fi
 }
 
 stop(){
+  status -q || return 0
+  local MODULE="$(getmodulename)"
   echo "$MODULE: stopping driver"
   modprobe -r "$MODULE"
+}
+
+status(){
+  lsmod | grep ${1+"$@"} -E "clvcon|clovercon"
 }
 
 case "$1" in
@@ -42,6 +93,9 @@ case "$1" in
   ;;
   stop)
     stop
+  ;;
+  status)
+    status
   ;;
   restart)
     stop

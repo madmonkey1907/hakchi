@@ -26,9 +26,11 @@ source_base(){
     source_parts "$1/b????_*"
     return 0
   fi
-  if [ "$cf_memboot" = "y" ] && [ -d "$modpath/rootfs/etc/preinit.d" ]; then
-    source_parts "$modpath/rootfs/etc/preinit.d/b????_*"
-    return 0
+  if ! [ "$cf_undershell" = "y" ]; then
+    if [ "$cf_memboot" = "y" ] && [ -d "$modpath/rootfs/etc/preinit.d" ]; then
+      source_parts "$modpath/rootfs/etc/preinit.d/b????_*"
+      return 0
+    fi
   fi
   if [ -d "$preinit.d" ]; then
     source_parts "$preinit.d/b????_*"
@@ -57,6 +59,11 @@ script_init(){
   source_base
   source_config
   softwareCheck
+}
+
+script_short_init(){
+  source "/etc/preinit.d/b0000_defines"
+  source_config
 }
 
 preinit(){

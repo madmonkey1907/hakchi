@@ -58,6 +58,7 @@ pack_install(){
   transfer_path "$transferpath"
   if [ -f "$transferpath/uninstall" ] && grep -xqF "no-uninstall" "$transferpath/uninstall"; then
     echo "package $packName installed"
+    cd /
     [ -d "$removetransferpath" ] && rm -rf "$removetransferpath"
     return 0
   fi

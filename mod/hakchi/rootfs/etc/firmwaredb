@@ -1,15 +1,29 @@
 # firmware file md5 note
-dp-hvc-release-v1.0.5-0-g2f04d11-jpn boot2 ac8144c3ea4ab32e017648ee80bdc230 hardwired controllers
-dp-hvc-release-v1.0.8-0-g32708cb-jpn boot2 cf5fd8e5ad0835bbf9dbd9bdc198a369 hardwired controllers
-dp-hvc-release-v3.0.1-0-gad315e1-jpn boot2 8a6731a5aebea36293f076fad9afa600 hardwired controllers
-dp-nes-release-v1.0.2-0-g99e37e1-eur_usa boot2 5cfdca351484e7025648abc3b20032ff
-dp-nes-release-v1.0.3-0-gc4c703b-eur_usa boot2 07bfb800beba6ef619c29990d14b5158
-dp-nes-release-v1.0.7-0-g4ea4041-eur_usa boot2 90eec1e2b4f00e53dc2dd53a9e7334c1
-dp-shvc-release-v2.0.7-0-geb2b275-eur boot2 d76c2a091ebe7b4614589fc6954653a5
-dp-shvc-release-v2.0.7-0-geb2b275-usa boot2 5296e64818bf2d1dbdc6b594f3eefd17
-dp-shvc-release-v2.0.12-0-gbff4fb3-jpn boot2 632e179db63d9bcd42281f776a030c14
-dp-shvc-release-v2.0.13-0-g9dca6c5-eur boot2 c2b57b550f35d64d1c6ce66f9b5180ce
-dp-shvc-release-v2.0.13-0-g9dca6c5-usa boot2 449b711238575763c6701f5958323d48
-dp-shvc-release-v2.0.14-0-gd8b65c6-eur boot2 0f890bc78cbd9ede43b83b015ba4c022
-dp-shvc-release-v2.0.14-0-gd8b65c6-jpn boot2 c3378edfc1b96a5268a066d5fbe12d89
-dp-shvc-release-v2.0.14-0-gd8b65c6-usa boot2 228967ab1035a347caa9c880419df487
+dp-hvc-release-v1.0.5-0-g2f04d11-jpn boot2/md5 ac8144c3ea4ab32e017648ee80bdc230 hardwired controllers
+dp-hvc-release-v1.0.5-0-g2f04d11-jpn boot2/sha1 1c3ca2cdf99dad6e5b62067fca51910ed4c533b3 hardwired controllers
+dp-hvc-release-v1.0.8-0-g32708cb-jpn boot2/md5 cf5fd8e5ad0835bbf9dbd9bdc198a369 hardwired controllers
+dp-hvc-release-v1.0.8-0-g32708cb-jpn boot2/sha1 318d8250d54d8cb131985991c5a0bd90073c23c1 hardwired controllers
+dp-hvc-release-v3.0.1-0-gad315e1-jpn boot2/md5 8a6731a5aebea36293f076fad9afa600 hardwired controllers
+dp-hvc-release-v3.0.1-0-gad315e1-jpn boot2/sha1 b46bbf741bee9c175755a8efc268ccdad7fc3764 hardwired controllers
+dp-nes-release-v1.0.2-0-g99e37e1-eur_usa boot2/md5 5cfdca351484e7025648abc3b20032ff
+dp-nes-release-v1.0.2-0-g99e37e1-eur_usa boot2/sha1 e03107bdffd96667ea4f303e6240761074a1cbd6
+dp-nes-release-v1.0.3-0-gc4c703b-eur_usa boot2/md5 07bfb800beba6ef619c29990d14b5158
+dp-nes-release-v1.0.3-0-gc4c703b-eur_usa boot2/sha1 2768ecd8e33590cd2675f639ea7cb965e7c5fab6
+dp-nes-release-v1.0.7-0-g4ea4041-eur_usa boot2/md5 90eec1e2b4f00e53dc2dd53a9e7334c1
+dp-nes-release-v1.0.7-0-g4ea4041-eur_usa boot2/sha1 228f98bd53c428d307d7ccea46d525102123b894
+dp-shvc-release-v2.0.7-0-geb2b275-eur boot2/md5 d76c2a091ebe7b4614589fc6954653a5
+dp-shvc-release-v2.0.7-0-geb2b275-eur boot2/sha1 f41425af51c14aacbf983aadbf6fa3be1a09fcd1
+dp-shvc-release-v2.0.7-0-geb2b275-usa boot2/md5 5296e64818bf2d1dbdc6b594f3eefd17
+dp-shvc-release-v2.0.7-0-geb2b275-usa boot2/sha1 e1e2897865a4ac66e148498d0eeaaf74ff134a7c
+dp-shvc-release-v2.0.12-0-gbff4fb3-jpn boot2/md5 632e179db63d9bcd42281f776a030c14
+dp-shvc-release-v2.0.12-0-gbff4fb3-jpn boot2/sha1 b14bb25447231b3bd4fbb93766361f38ca5658ea
+dp-shvc-release-v2.0.13-0-g9dca6c5-eur boot2/md5 c2b57b550f35d64d1c6ce66f9b5180ce
+dp-shvc-release-v2.0.13-0-g9dca6c5-eur boot2/sha1 b68fe483ed14dbd1f520da0164554592a467b42d
+dp-shvc-release-v2.0.13-0-g9dca6c5-usa boot2/md5 449b711238575763c6701f5958323d48
+dp-shvc-release-v2.0.13-0-g9dca6c5-usa boot2/sha1 9c043afa80fa8e80e6782a919b4190ed433a9713
+dp-shvc-release-v2.0.14-0-gd8b65c6-eur boot2/md5 0f890bc78cbd9ede43b83b015ba4c022
+dp-shvc-release-v2.0.14-0-gd8b65c6-eur boot2/sha1 33b5d4d50330aa0b1813c95369c64c74b6a9e030
+dp-shvc-release-v2.0.14-0-gd8b65c6-jpn boot2/md5 c3378edfc1b96a5268a066d5fbe12d89
+dp-shvc-release-v2.0.14-0-gd8b65c6-jpn boot2/sha1 1942c4c3dfc0dbd1203a561af2a18af817f0a66b
+dp-shvc-release-v2.0.14-0-gd8b65c6-usa boot2/md5 228967ab1035a347caa9c880419df487
+dp-shvc-release-v2.0.14-0-gd8b65c6-usa boot2/sha1 b5f5787eee6deb8c8ee2aeb85441a40b2fdb76ed

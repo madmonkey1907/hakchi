@@ -1,6 +1,6 @@
 #!/bin/sh
 source /etc/preinit
-script_init
+script_short_init
 
 NAME="llmnrd"
 DAEMON="/bin/$NAME"

@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #https://bazaar.launchpad.net/~elementary-os/elementaryos/zramswap-enabler/view/head:/debian/zramswap.upstart
 
 lmod(){
@@ -37,6 +36,13 @@ stop(){
 NAME="zram"
 case "$1" in
   start)
+    if tty >/dev/null; then
+      exec "$0" start-detached
+    else
+      "$0" start-detached >/dev/null &
+    fi
+  ;;
+  start-detached)
     echo "Starting $NAME: "
     start && echo "OK" || echo "Failed"
   ;;

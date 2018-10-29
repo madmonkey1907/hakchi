@@ -1,3 +1,4 @@
+#!/bin/sh
 # if no kexec, abort
 (uname -r | grep -qF madmonkey) || return 1
 
@@ -22,5 +23,7 @@ insertKeyFile "./boot/boot.img"
 rm -rf "$khmod"
 mkdir -p "$khmod"
 copy "./" "$khmod/"
+cat "./var/version"
+date -Rr "./var/version"
 memboot "./boot/boot.img" "$modname-install"
 return 1
