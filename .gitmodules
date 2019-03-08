@@ -15,4 +15,4 @@
 	url = https://github.com/DanTheMan827/decodepng.git
 [submodule "3rdparty/sun-nontendocm-kernel"]
 	path = 3rdparty/sun-nontendocm-kernel
-	url = git@hakchi.net:hakchi/sun-nontendocm-kernel.git
+	url = https://github.com/madmonkey1907/sun-nontendocm-kernel.git
