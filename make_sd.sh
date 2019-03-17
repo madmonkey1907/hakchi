@@ -52,9 +52,10 @@ mkfs.vfat -F 16 -s 16 "$sdFs" || exit 11
 mkdir -p "$fsRoot/hakchi/rootfs/bin" || exit 12
 rsync -ac "$scriptPath/mod/hakchi/rootfs/" "$fsRoot/hakchi/rootfs" || exit 13
 rsync -ac "$scriptPath/mod/bin/" "$fsRoot/hakchi/rootfs/bin" || exit 14
-mkdir "$fsRoot/hakchi/rootfs/lib/"
+mkdir -p "$fsRoot/hakchi/rootfs/lib/modules/"
 
-rsync -ac "$scriptPath/data/modules" "$fsRoot/hakchi/rootfs/lib/" || exit 14
+
+rsync -ac "$scriptPath/data/modules/" "$fsRoot/hakchi/rootfs/lib/modules/" || exit 14
 rsync -ac --links \
   "$scriptPath/kernel-hmod/bin" \
   "$scriptPath/kernel-hmod/etc" \

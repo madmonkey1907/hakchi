@@ -148,7 +148,7 @@ nandbUnlocked(){
 }
 
 currentFirmware(){
-  if isSdBoot && mount | grep -q "loop2 on /${mountpoint##/} "; then
+  if isSdBoot && mount | grep -q "loop2 on /newroot "; then
     echo "_nand_"
     return 0
   fi

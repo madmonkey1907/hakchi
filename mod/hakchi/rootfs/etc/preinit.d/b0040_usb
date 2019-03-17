@@ -154,6 +154,8 @@ checkExtStorage(){
     done
   fi
 
+  isSdBoot && return 1
+
   [ "$timeout" -lt "3000" ] || timeout="3000"
   if mmcUsed && waittimeout timeout 'ls "/sys/block" | grep -qF "mmc"' "sd card"; then
     blockDevice="/dev/mmcblk0"
@@ -165,13 +167,5 @@ checkExtStorage(){
     done
   fi
 
-  mmcUsed || return 1
-  isSdBoot && return 1
-  [ $timeout -gt 2 ] && timeout=2
-  blockDevice="/dev/mmcblk0p"
-  waitForMmcDevice "${blockDevice}1"
-  for p in $(seq 1 9); do
-    checkStorageDevice "$blockDevice$p" && return 0
-  done
   return 1
 }
