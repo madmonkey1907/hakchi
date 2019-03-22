@@ -17,6 +17,8 @@ if isSdBoot; then
   return 1
 fi
 
+rm -rf "$transferpath/sd/"
+
 # if no kexec, abort
 (uname -r | grep -qF madmonkey) || return 1
 

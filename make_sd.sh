@@ -11,7 +11,7 @@ scriptPath="$(pwd)"
 sd="$scriptPath/sd"
 sdTemp="$sd/temp"
 sdImg="$sd.img"
-sdFs="$sdTemp/data.fat32"
+sdFs="$sdTemp/data.vfat"
 squashTemp="$sdTemp/squash"
 updateTemp="$scriptPath/kernel-hmod/sd"
 squashFile="$sdTemp/squash.hsqs"
@@ -48,7 +48,7 @@ EOT
 
 [ "$?" != "0" ] && exit 10
 
-mkfs.vfat -F 16 -s 16 "$sdFs" || exit 11
+mkfs.vfat -F 16 -s 16 -n "HSQS HERE" "$sdFs" || exit 11
 mkdir -p "$fsRoot/hakchi/rootfs/bin" || exit 12
 rsync -ac "$scriptPath/mod/hakchi/rootfs/" "$fsRoot/hakchi/rootfs" || exit 13
 rsync -ac "$scriptPath/mod/bin/" "$fsRoot/hakchi/rootfs/bin" || exit 14
@@ -90,7 +90,9 @@ dd "if=$scriptPath/kernel.img" "of=$sdImg" bs=1K seek=20480 conv=notrunc || exit
 dd "if=$squashFile" "of=$sdImg" bs=1K seek=40 conv=notrunc || exit 33
 dd "if=$sdFs" "of=$sdImg" bs=1M seek=32 conv=notrunc || exit 34
 
+dd "if=$sdImg" "of=$updateTemp/mbr.bin" bs=512 count=1
 cp "$sd/boot0.bin" "$sd/uboot.bin" "$scriptPath/kernel.img" "$squashFile" "$updateTemp/" || exit 35
+gzip -c "$sdFs" > "$updateTemp/data.vfat.gz"
 
 cd "$scriptPath"
 ./make-kernel-hmod.sh norsync

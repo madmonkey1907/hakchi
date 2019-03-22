@@ -568,6 +568,7 @@ hwid(){
 }
 
 mmcUsed(){
+  isSdBoot && return 0
   getScript | grep -qF 'sdc_used = 1'
 }
 

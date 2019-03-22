@@ -66,13 +66,14 @@ if [ "$SD" = "y" ] && [ "$(head -c6 /dev/mmcblk0)" == "hakchi" ]; then
   if [ -f "$firmware" ]; then
     losetup /dev/loop2 "$firmware" 
     ROOTFS="/dev/loop2"
-    DECRYPT="n"
   else
     ROOTFS="/dev/nandb"
-    DECRYPT="y"
-    [ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$ROOTFS")" == "1936814952" ] && DECRYPT="n"
+    umount /firmware
+    rmdir /firmware
   fi
 fi
+
+[ "$(hexdump -e '1/4 "%u"' -s 0 -n 4 "$ROOTFS")" == "1936814952" ] && DECRYPT="n" || DECRYPT="y"
 
 if [ "${DECRYPT}" = "y" ] && [ ! -f "$keyfile" ]; then
   kfb64="$(sunxi-flash cmdline | sed -ne 's/.*hakchi-key-file=base64:\([^ ]*\).*/\1/p')" && ! [ -z "$kfb64" ] && echo "$kfb64" | base64 -d >"$keyfile"

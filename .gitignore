@@ -23,6 +23,7 @@ kernel*/*
 !kernel/kernel.img-ramdiskoff
 !kernel/kernel.img-secondoff
 !kernel/kernel.img-tagsoff
+!kernel/kernel.img-zImage
 data/*
 !data/zImage
 dump/*
