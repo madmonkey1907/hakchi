@@ -15,4 +15,4 @@ sfregion=""
 gamepath=""
 profilepath="/var/lib/clover/profiles/0"
 temppath="/tmp"
-hakchiVersion='v1.0.4-129'
+hakchiVersion='v1.0.4-130'

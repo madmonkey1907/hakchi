@@ -26,7 +26,7 @@ source_base "./etc/preinit.d"
 copy "./bin/" "$rootfs/bin/"
 copy "./lib/modules/" "$rootfs/lib/modules/" --delete
 
-if [ "$cf_install" = "y" ] || [ "$cf_memboot" = "y" ]; then
+if ! isSdBoot && ([ "$cf_install" = "y" ] || [ "$cf_memboot" = "y" ]); then
   if sunxi-flash nandsize >/dev/null; then
     installBoot2 "./boot/boot.img"
     return 1

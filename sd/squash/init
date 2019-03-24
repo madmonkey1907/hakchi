@@ -2,19 +2,32 @@
 echo "Partitioning and formatting SD card"
 echo ""
 
+if [ "$1" == "partition" ] || [ -z "$1" ]; then
 /squashtools/sfdisk /dev/mmcblk0 <<EOT
 32M,96M,06
 128M,,L
 EOT
+fi
 
+if [ "$1" == "format" ] || [ -z "$1" ]; then
 yes | mke2fs -t ext4 -L data -b 4K -E stripe-width=32 -O ^huge_file,^metadata_csum /dev/mmcblk0p2
+fi
+
+if [ "$1" == "mount" ] || [ -z "$1" ]; then
 mkdir /data
 mount /dev/mmcblk0p2 /data
-rsync -ac /squashtools/fsroot/ /data/
+fi
+
+if [ "$1" == "copy" ] || [ -z "$1" ]; then
+rsync -avc /squashtools/fsroot/ /data/
 mkdir -p /data/hakchi/transfer/
-rsync -ac /squashtools/extra-hmods/ /data/hakchi/transfer/
+rsync -avc /squashtools/extra-hmods/ /data/hakchi/transfer/
 sync
+fi
+
+if [ "$1" == "umount" ] || [ -z "$1" ]; then
 umount /data
 rmdir /data
 umount /squashtools
 rmdir /squashtools
+fi
